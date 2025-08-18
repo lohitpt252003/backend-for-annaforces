@@ -1,10 +1,29 @@
 from flask import Blueprint, request, jsonify
 import sys, os
 import json
+from functools import wraps
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if 'Authorization' in request.headers:
+            token = request.headers['Authorization'].split(" ")[1]
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 401
+        try:
+            data = validate_token(token)
+            if not data['valid']:
+                return jsonify({'message': data['error']}), 401
+        except:
+            return jsonify({'message': 'Token is invalid!'}), 401
+        return f(*args, **kwargs)
+    return decorated
 
 # Step 1: Add project root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from utils.jwt_token import validate_token
 # Step 2: Import service
 from services.github_services import get_file, add_file, update_file
 
@@ -13,6 +32,7 @@ problems_bp = Blueprint("problems", __name__)
 
 # Step 4: Flask route function
 @problems_bp.route('/', methods=['GET'])
+@token_required
 def get_problems():
     file_obj = get_file('data/problem_list.json')[0]
     if not file_obj:
@@ -23,6 +43,7 @@ def get_problems():
     return problems_json
 
 @problems_bp.route('/<id>', methods=['GET'])
+@token_required
 def get_problem(id):
     file_obj = get_file(f'data/problems/{id}/problem.json')[0]
     if not file_obj:
@@ -34,6 +55,7 @@ def get_problem(id):
 
 # New API endpoint to get all submissions for a particular problem ID from GitHub
 @problems_bp.route('/<int:problem_id>/submissions', methods=['GET'])
+@token_required
 def get_all_submissions_for_problem(problem_id):
     """
     Retrieves all submission files for a given problem ID from GitHub.
@@ -80,6 +102,7 @@ def get_all_submissions_for_problem(problem_id):
 
 
 @problems_bp.route('/add_problem', methods=['POST'])
+@token_required
 def add_problem():
     pass
     # data = request.get_json()
@@ -91,6 +114,7 @@ def add_problem():
     # return {"message": "Problem added"}
 
 @problems_bp.route('/update_problem', methods=['POST'])
+@token_required
 def update_problem():
     pass
     # data = request.get_json()
