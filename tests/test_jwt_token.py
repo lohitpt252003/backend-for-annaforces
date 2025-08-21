@@ -2,8 +2,6 @@ import sys
 import os
 import time
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from utils.jwt_token import generate_token, validate_token
 
 token = generate_token(123)

@@ -13,7 +13,7 @@ SERVER_SECRET_KEY = os.getenv("SERVER_SECRET_KEY")
 def generate_token(user_id):
     payload = {
         "user_id": user_id,
-        "exp": int(time.time()) + 24 * 60 * 60  # expires in sec
+        "exp": int(time.time()) + 10  # expires in sec
     }
 
     token = jwt.encode(payload, SERVER_SECRET_KEY, algorithm="HS256")

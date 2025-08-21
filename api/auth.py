@@ -5,16 +5,15 @@ import sys, os
 
 auth_bp = Blueprint('auth_bp', __name__)
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from utils.jwt_token import generate_token
+from config.github_config import GITHUB_USERS_BASE_PATH
 
 @auth_bp.route('/user/<user_id>', methods=['GET'])
 def get_user(user_id):
     """
     Fetches user information from a JSON file in the GitHub repository.
     """
-    file_path = f"data/users/{user_id}/user.json"
+    file_path = f"{GITHUB_USERS_BASE_PATH}/{user_id}/user.json"
     content, _, error = get_file(file_path)
 
     if error:
