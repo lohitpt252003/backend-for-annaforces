@@ -140,3 +140,78 @@ This API is responsible for fetching problem information.
             "error": "Failed to decode problem data for problem id <problem_id>."
         }
         ```
+
+### Submissions API
+
+This API is responsible for grading code submissions.
+
+#### Grade Submission
+
+*   **Endpoint:** `/api/submissions`
+*   **Method:** `POST`
+*   **Description:** Submits code for grading against a specific problem.
+*   **Request Body:**
+    ```json
+    {
+        "code": "print(int(input()) + int(input()))",
+        "language": "python",
+        "problem_id": "1"
+    }
+    ```
+*   **Success Response (200):**
+    *   **Content:**
+        ```json
+        {
+            "overall_status": "accepted",
+            "test_results": [
+                {
+                    "test_case_number": 1,
+                    "status": "passed",
+                    "message": "Test case passed",
+                    "execution_time": 0.01,
+                    "memory_usage": 3.5,
+                    "actual_output": "3",
+                    "expected_output": "3"
+                },
+                {
+                    "test_case_number": 2,
+                    "status": "passed",
+                    "message": "Test case passed",
+                    "execution_time": 0.01,
+                    "memory_usage": 3.5,
+                    "actual_output": "5",
+                    "expected_output": "5"
+                }
+            ]
+        }
+        ```
+*   **Error Responses:**
+    *   **404 Not Found:** If the problem with the given ID is not found.
+        ```json
+        {
+            "error": "Problem with id <problem_id> not found"
+        }
+        ```
+    *   **500 Internal Server Error:** If no test cases are found for the problem.
+        ```json
+        {
+            "overall_status": "error",
+            "message": "No test cases found for this problem."
+        }
+        ```
+
+### Judge API
+
+The Judge API is not a separate service but a core component of the backend responsible for executing code submissions securely. It uses a dedicated module, `judge_image_for_annaforces`, which leverages Docker to create an isolated environment for each submission.
+
+#### How It Works
+
+1.  **Sandboxing:** Each submission is run inside a Docker container to prevent it from accessing the host system or interfering with other submissions.
+2.  **Resource Limiting:** The execution is strictly limited by time and memory constraints defined for the problem.
+3.  **Supported Languages:** The judge currently supports C, C++, and Python.
+4.  **Execution Process:**
+    *   The user's code and the problem's test cases are copied into the container.
+    *   For C and C++, the code is first compiled. If compilation fails, an error is returned.
+    *   The code is then executed against each test case.
+    *   The output of the code is compared with the expected output for each test case.
+5.  **Results:** The judge returns detailed results for each test case, including status (passed, wrong answer, time limit exceeded, etc.), execution time, and memory usage.
