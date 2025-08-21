@@ -7,6 +7,7 @@ import time
 from utils.jwt_token import validate_token
 from services.github_services import get_file
 from config.github_config import GITHUB_PROBLEMS_BASE_PATH
+from services.judge_service import grade_submission
 
 # Blueprint declaration
 problems_bp = Blueprint("problems", __name__)
@@ -39,4 +40,5 @@ def submit_problem(id):
     """
     Handles a code submission for a specific problem by a user.
     """
+    
     pass

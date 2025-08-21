@@ -48,8 +48,6 @@ def get_testcases(problem_id):
     
     return testcases
 
-print(get_testcases(1))
-
 def grade_submission(code, language, problem_id):
     """
     Grades a submission by running it against all test cases for a given problem.
@@ -60,56 +58,68 @@ def grade_submission(code, language, problem_id):
         return {"overall_status": "error", "message": "No test cases found for this problem."}
 
     results = []
-    overall_status = "accepted" # Assume accepted until a test case fails
-
-    extension = 'py'
-    if language.lower() == 'python': extension = 'py'
-    elif language.lower() == 'c': extension = 'c'
-    elif language.lower() == 'c++': extension = 'cpp'
-    
+    verdicts = []
 
     for i, testcase in enumerate(testcases):
         print(f'Running {i + 1} testcase!')
         stdin = testcase.get('stdin', '')
         expected_stdout = testcase.get('stdout', '')
+        
         result = execute_code(language, code, testcase.get('stdin'))
         print(result)
-        # Run the code in a container
-        # Assuming run_code_in_container returns stdout, stderr, exit_code, execution_time, memory_usage
-        # stdout, stderr, exit_code, execution_time, memory_usage = run_code_in_container(code, language, stdin)
+
+        stdout = result.get('stdout', '')
+        stderr = result.get('stderr', '')
+        err = result.get('err', '')
+        timetaken = result.get('timetaken', 0)
+        memorytaken = result.get('memorytaken', 0)
 
         test_status = "passed"
         message = "Test case passed"
 
-        # if exit_code != 0:
-        #     test_status = "runtime_error"
-        #     message = f"Runtime Error: {stderr}"
-        #     overall_status = "wrong_answer" # A runtime error means wrong answer overall
-        # elif stdout.strip() != expected_stdout.strip():
-        #     test_status = "wrong_answer"
-        #     message = "Output mismatch"
-        #     overall_status = "wrong_answer" # If any test case fails, overall status is wrong answer
-
-        # results.append({
-        #     "test_case_number": i + 1,
-        #     "status": test_status,
-        #     "message": message,
-        #     "execution_time": execution_time,
-        #     "memory_usage": memory_usage,
-        #     "actual_output": stdout,
-        #     "expected_output": expected_stdout
-        # })
+        if err:
+            if "Compilation Error" in err:
+                test_status = "compilation_error"
+                message = "Compilation Error"
+            elif "Time Limit Exceeded" in err:
+                test_status = "time_limit_exceeded"
+                message = "Time Limit Exceeded"
+            elif "Memory Limit Exceeded" in err:
+                test_status = "memory_limit_exceeded"
+                message = "Memory Limit Exceeded"
+            else:
+                test_status = "runtime_error"
+                message = f"Runtime Error: {err}"
+        elif stdout.strip() != expected_stdout.strip():
+            test_status = "wrong_answer"
+            message = "Output mismatch"
         
-        if test_status != "passed":
-            overall_status = "wrong_answer" # If any test case fails, overall status is wrong answer
+        verdicts.append(test_status)
+
+        results.append({
+            "test_case_number": i + 1,
+            "status": test_status,
+            "message": message,
+            "execution_time": timetaken,
+            "memory_usage": memorytaken,
+            "actual_output": stdout,
+            "expected_output": expected_stdout
+        })
+
+    # Determine overall status based on the verdicts
+    overall_status = "accepted"
+    if "compilation_error" in verdicts:
+        overall_status = "compilation_error"
+    elif "runtime_error" in verdicts:
+        overall_status = "runtime_error"
+    elif "time_limit_exceeded" in verdicts:
+        overall_status = "time_limit_exceeded"
+    elif "memory_limit_exceeded" in verdicts:
+        overall_status = "memory_limit_exceeded"
+    elif "wrong_answer" in verdicts:
+        overall_status = "wrong_answer"
 
     return {
         "overall_status": overall_status,
         "test_results": results
     }
-
-
-
-code = 'print(int(input()) + int(input()))'
-g = grade_submission(code, 'python', 1)
-print(g)

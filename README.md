@@ -159,10 +159,12 @@ This API is responsible for grading code submissions.
     }
     ```
 *   **Success Response (200):**
-    *   **Content:**
+    *   **Content:** The response will include an `overall_status` and a list of `test_results`.
+    *   **`overall_status` can be one of:** `accepted`, `wrong_answer`, `time_limit_exceeded`, `memory_limit_exceeded`, `compilation_error`, `runtime_error`.
+    *   **Example (Wrong Answer):**
         ```json
         {
-            "overall_status": "accepted",
+            "overall_status": "wrong_answer",
             "test_results": [
                 {
                     "test_case_number": 1,
@@ -175,11 +177,11 @@ This API is responsible for grading code submissions.
                 },
                 {
                     "test_case_number": 2,
-                    "status": "passed",
-                    "message": "Test case passed",
+                    "status": "wrong_answer",
+                    "message": "Output mismatch",
                     "execution_time": 0.01,
                     "memory_usage": 3.5,
-                    "actual_output": "5",
+                    "actual_output": "6",
                     "expected_output": "5"
                 }
             ]
@@ -192,11 +194,27 @@ This API is responsible for grading code submissions.
             "error": "Problem with id <problem_id> not found"
         }
         ```
-    *   **500 Internal Server Error:** If no test cases are found for the problem.
+    *   **500 Internal Server Error:** If there is an issue with the judging process (e.g., no test cases found, compilation error).
         ```json
         {
             "overall_status": "error",
             "message": "No test cases found for this problem."
+        }
+        ```
+        ```json
+        {
+            "overall_status": "compilation_error",
+            "test_results": [
+                {
+                    "test_case_number": 1,
+                    "status": "compilation_error",
+                    "message": "Compilation Error",
+                    "execution_time": 0,
+                    "memory_usage": 0,
+                    "actual_output": "",
+                    "expected_output": ""
+                }
+            ]
         }
         ```
 
