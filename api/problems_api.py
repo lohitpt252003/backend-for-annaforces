@@ -40,5 +40,14 @@ def submit_problem(id):
     """
     Handles a code submission for a specific problem by a user.
     """
-    
-    pass
+    data = request.get_json()
+    if not data or 'code' not in data or 'language' not in data:
+        return jsonify({"error": "Missing required fields: code and language"}), 400
+
+    code = data['code']
+    language = data['language']
+    problem_id = id
+
+    result = grade_submission(code, language, problem_id)
+
+    return jsonify(result)

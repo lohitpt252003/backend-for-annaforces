@@ -147,42 +147,46 @@ This API is responsible for grading code submissions.
 
 #### Grade Submission
 
-*   **Endpoint:** `/api/submissions`
+*   **Endpoint:** `/api/problems/<problem_id>/submit`
 *   **Method:** `POST`
 *   **Description:** Submits code for grading against a specific problem.
 *   **Request Body:**
     ```json
     {
-        "code": "print(int(input()) + int(input()))",
-        "language": "python",
+        "code": "#include <iostream>\nint main() {\n    int a, b;
+    std::cin >> a >> b;
+    std::cout << a + b;
+    return 0;
+}",
+        "language": "c++",
         "problem_id": "1"
     }
     ```
 *   **Success Response (200):**
     *   **Content:** The response will include an `overall_status` and a list of `test_results`.
     *   **`overall_status` can be one of:** `accepted`, `wrong_answer`, `time_limit_exceeded`, `memory_limit_exceeded`, `compilation_error`, `runtime_error`.
-    *   **Example (Wrong Answer):**
+    *   **Example (Accepted):**
         ```json
         {
-            "overall_status": "wrong_answer",
+            "overall_status": "accepted",
             "test_results": [
                 {
-                    "test_case_number": 1,
-                    "status": "passed",
+                    "actual_output": "2",
+                    "execution_time": 0.0,
+                    "expected_output": "2",
+                    "memory_usage": 3.3671875,
                     "message": "Test case passed",
-                    "execution_time": 0.01,
-                    "memory_usage": 3.5,
-                    "actual_output": "3",
-                    "expected_output": "3"
+                    "status": "passed",
+                    "test_case_number": 1
                 },
                 {
-                    "test_case_number": 2,
-                    "status": "wrong_answer",
-                    "message": "Output mismatch",
-                    "execution_time": 0.01,
-                    "memory_usage": 3.5,
-                    "actual_output": "6",
-                    "expected_output": "5"
+                    "actual_output": "4",
+                    "execution_time": 0.0,
+                    "expected_output": "4",
+                    "memory_usage": 3.5078125,
+                    "message": "Test case passed",
+                    "status": "passed",
+                    "test_case_number": 2
                 }
             ]
         }
@@ -199,22 +203,6 @@ This API is responsible for grading code submissions.
         {
             "overall_status": "error",
             "message": "No test cases found for this problem."
-        }
-        ```
-        ```json
-        {
-            "overall_status": "compilation_error",
-            "test_results": [
-                {
-                    "test_case_number": 1,
-                    "status": "compilation_error",
-                    "message": "Compilation Error",
-                    "execution_time": 0,
-                    "memory_usage": 0,
-                    "actual_output": "",
-                    "expected_output": ""
-                }
-            ]
         }
         ```
 
