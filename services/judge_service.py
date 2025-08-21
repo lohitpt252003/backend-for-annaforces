@@ -7,6 +7,9 @@ import shutil
 from services.github_services import get_file
 from judge_image_for_annaforces.good_one import execute_code
 
+
+SIZE = 50
+
 def get_testcases(problem_id):
     testcases = []
     # Path to the file containing the number of test cases
@@ -25,6 +28,8 @@ def get_testcases(problem_id):
         print(f"Error: Could not parse number of test cases from {num_testcases_file_path}. Content: {number_of_testcases_str}")
         return []
 
+    print()
+    print(SIZE * '=' + " EXTRACTING TESTCASES " + SIZE * '=')
     for i in range(1, number_of_testcases + 1):
         input_file_path = f'data/problems/{problem_id}/testcases/{i}.in'
         output_file_path = f'data/problems/{problem_id}/testcases/{i}.out'
@@ -45,7 +50,10 @@ def get_testcases(problem_id):
                 'stdout' : stdout_content.strip()
             }
         )
-    
+    print(testcases)
+    print(SIZE * '=' + " DONE WITH EXTRACTING TESTCASES " + SIZE * '=')
+    print()
+
     return testcases
 
 def grade_submission(code, language, problem_id):
@@ -61,7 +69,7 @@ def grade_submission(code, language, problem_id):
     verdicts = []
 
     for i, testcase in enumerate(testcases):
-        print(f'Running {i + 1} testcase!')
+        print(SIZE * '=' + f' Running testcase {i + 1}! ' + '=' * SIZE)
         stdin = testcase.get('stdin', '')
         expected_stdout = testcase.get('stdout', '')
         
@@ -93,7 +101,7 @@ def grade_submission(code, language, problem_id):
         elif stdout.strip() != expected_stdout.strip():
             test_status = "wrong_answer"
             message = "Output mismatch"
-        
+        print()
         verdicts.append(test_status)
 
         results.append({

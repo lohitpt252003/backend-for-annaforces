@@ -206,6 +206,30 @@ This API is responsible for grading code submissions.
         }
         ```
 
+#### Submission Storage
+
+All code submissions and their results are stored directly in the configured GitHub repository. This allows for persistent storage and easy access to submission history.
+
+**Folder Structure:**
+
+Submissions are organized into two main categories: user-specific and problem-specific.
+
+*   **User-Specific Submissions:**
+    *   **Path:** `data/users/{user_id}/{problem_id}/{verdict}/`
+    *   **Files:**
+        *   `last_submission.txt`: Stores a simple integer representing the count of submissions for that specific user, problem, and verdict. This is used to generate unique filenames for each submission.
+        *   `{submission_no}.json`: Contains the detailed JSON result of a specific submission. `{submission_no}` corresponds to the count from `last_submission.txt`.
+
+*   **Problem-Specific Submissions:**
+    *   **Path:** `data/problems/{problem_id}/{user_id}/{verdict}/`
+    *   **Files:**
+        *   `last_submission.txt`: Similar to the user-specific version, this stores the count of submissions for a given problem, user, and verdict.
+        *   `{submission_no}.json`: Contains the detailed JSON result of a specific submission for that problem and user.
+
+**Implicit Folder Creation:**
+
+Folders within the `data/` directory (e.g., `users/`, `problems/`, `user_id/`, `problem_id/`, `verdict/`) are created automatically by the GitHub API when the first file is added to a new path. There is no need for explicit folder creation.
+
 ### Judge API
 
 The Judge API is not a separate service but a core component of the backend responsible for executing code submissions securely. It uses a dedicated module, `judge_image_for_annaforces`, which leverages Docker to create an isolated environment for each submission.

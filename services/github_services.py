@@ -9,15 +9,15 @@ load_dotenv()
 
 def get_github_config():
     token = os.getenv("GITHUB_TOKEN")
-    repo = os.getenv("GITHUB_REPO") 
+    repo = os.getenv("GITHUB_REPO")
     owner = os.getenv("GITHUB_OWNER")
-    
+
     if not all([token, repo, owner]):
         return None, None, None, {
             "error": True,
             "message": "Missing required environment variables: GITHUB_TOKEN, GITHUB_REPO, GITHUB_OWNER"
         }
-    
+
     return token, repo, owner, None
 
 GITHUB_TOKEN, GITHUB_REPO, GITHUB_OWNER, config_error = get_github_config()
@@ -36,12 +36,12 @@ HEADERS = {
 def get_file(filename_path):
     if not filename_path:
         return None, None, {"error": True, "message": "filename_path cannot be empty"}
-    
+
     url = f"{API_BASE}/{filename_path}"
-    
+
     try:
         response = requests.get(url, headers=HEADERS, timeout=30)
-        
+
         if response.status_code == 200:
             resp_json = response.json()
             try:
@@ -54,7 +54,7 @@ def get_file(filename_path):
             return None, None, {"error": True, "message": f"File not found: {filename_path}"}
         else:
             return None, None, {"error": True, "message": f"Error getting file: {response.status_code} - {response.text}"}
-            
+
     except requests.exceptions.RequestException as e:
         return None, None, {"error": True, "message": f"Request failed: {e}"}
 
@@ -62,15 +62,15 @@ def get_file(filename_path):
 def add_file(filename_path, data, commit_message=None, retries=3):
     if not filename_path or not data:
         return {"error": True, "message": "filename_path and data cannot be empty"}
-    
+
     url = f"{API_BASE}/{filename_path}"
     message = commit_message or f"Add {filename_path}"
-    
+
     payload = {
         "message": message,
         "content": base64.b64encode(str(data).encode('utf-8')).decode('ascii')
     }
-    
+
     for attempt in range(retries):
         try:
             response = requests.put(url, headers=HEADERS, data=json.dumps(payload), timeout=30)
@@ -96,23 +96,23 @@ def add_file(filename_path, data, commit_message=None, retries=3):
 def update_file(filename_path, data, commit_message=None, retries=3):
     if not filename_path or not data:
         return {"error": True, "message": "filename_path and data cannot be empty"}
-    
+
     url = f"{API_BASE}/{filename_path}"
     message = commit_message or f"Update {filename_path}"
-    
+
     sha_data = get_file(filename_path)
     if sha_data[2] is not None:
         return {"error": True, "message": f"Cannot update file - file not found or inaccessible: {sha_data[2]['message']}"}
-    
+
     sha = sha_data[1]
-    
+
     payload = {
         "message": message,
         "content": base64.b64encode(str(data).encode('utf-8')).decode('ascii'),
         "sha": sha
     }
-
-    for attempt in range(retries):
+    
+    for attempt in range(int(retries)):
         try:
             response = requests.put(url, headers=HEADERS, data=json.dumps(payload), timeout=30)
             if response.status_code in [200, 201]:
@@ -147,9 +147,9 @@ def create_or_update_file(filename_path, data, commit_message=None):
 def get_folder_contents(path):
     """Return list of file contents inside a GitHub folder."""
     url = f"{API_BASE}/{path}"
-    
+
     response = requests.get(url, headers=HEADERS)
-    
+
     if response.status_code == 200:
         contents = response.json()
         if isinstance(contents, list):
@@ -167,7 +167,7 @@ def get_folder_contents(path):
             return {"success": False, "error": "Path is not a folder"}
     else:
         return {"success": False, "error": f"GitHub API Error: {response.status_code}, {response.text}"}
-    
+
 
 if __name__ == '__main__':
     print(json.dumps(get_folder_contents('data/'), indent=4))

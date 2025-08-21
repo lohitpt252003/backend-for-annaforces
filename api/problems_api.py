@@ -8,6 +8,7 @@ from utils.jwt_token import validate_token
 from services.github_services import get_file
 from config.github_config import GITHUB_PROBLEMS_BASE_PATH
 from services.judge_service import grade_submission
+from services.submission_service import add_submission
 
 # Blueprint declaration
 problems_bp = Blueprint("problems", __name__)
@@ -47,7 +48,10 @@ def submit_problem(id):
     code = data['code']
     language = data['language']
     problem_id = id
+    user_id = data['user_id']
 
     result = grade_submission(code, language, problem_id)
+    
+    add = add_submission(problem_id, user_id, result)
 
     return jsonify(result)
