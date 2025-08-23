@@ -13,7 +13,16 @@ problems_bp = Blueprint("problems", __name__)
 
 @problems_bp.route('/', methods=['GET'])
 def get_problems():
-    pass
+    file_path = f"{GITHUB_PROBLEMS_BASE_PATH}/index.json"
+    content, _, error = get_file(file_path)
+
+    if error:
+        return jsonify({"error": error["message"]}), 500
+
+    try:
+        return jsonify(json.loads(content)), 200
+    except json.JSONDecodeError:
+        return jsonify({"error": "Failed to decode JSON"}), 500
 
 @problems_bp.route('/<problem_id>', methods=['GET'])
 def get_problem_by_id(problem_id):
