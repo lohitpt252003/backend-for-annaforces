@@ -1,0 +1,4 @@
+{
+  "P1": { "title": "Add", "difficulty": "Easy", "tags": ["easy", "input", "output"], "authors": ["username1", "username2"] },
+  "P2": { "title": "Subtract", "difficulty": "Easy", "tags": ["easy", "input", "output"], "authors": ["username1", "username2"] }
+}
