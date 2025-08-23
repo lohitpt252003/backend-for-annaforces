@@ -1,2 +1,3 @@
 GITHUB_PROBLEMS_BASE_PATH = 'data/problems'
 GITHUB_USERS_BASE_PATH = 'data/users'
+GITHUB_PROBLEMS_SUBMISSIONS_BASE_PATH = f'data/problems'

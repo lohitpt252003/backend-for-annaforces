@@ -1,8 +1,9 @@
 import os, time, json
 import sys
-from flask import jsonify
 
-from services.github_services import get_file, add_file, update_file
+
+from services.github_services import get_file, add_file, update_file, get_folder_contents
+from config.github_config import GITHUB_PROBLEMS_SUBMISSIONS_BASE_PATH
 
 def add_submission_to_user(user_id, problem_id, result):
     verdict = result.get('overall_status', 'other')
@@ -15,7 +16,7 @@ def add_submission_to_user(user_id, problem_id, result):
     )
 
     # Changed path to include 'users'
-    last_submission_path = f'data/users/{user_id}/{problem_id}/{verdict}/last_submission.txt'
+    last_submission_path = f'data/users/{user_id}/{problem_id}/submissions/{verdict}/last_submission.txt'
     submission_content, submission_sha, error = get_file(last_submission_path)
     submission_no = 1
     if error and "not found" in error.get("message", "").lower(): # File not found
@@ -37,7 +38,7 @@ def add_submission_to_user(user_id, problem_id, result):
         return # Or handle the error appropriately
 
     # Changed path to include 'users'
-    filename_path = f'data/users/{user_id}/{problem_id}/{verdict}/{submission_no}.json'
+    filename_path = f'data/users/{user_id}/{problem_id}/submissions/{verdict}/{submission_no}.json'
     add_file(filename_path, content, f'submitted for {problem_id}')
     pass
 
@@ -52,7 +53,7 @@ def add_submission_to_problem(user_id, problem_id, result):
     )
 
     # Changed path to include 'problems'
-    last_submission_path = f'data/problems/{problem_id}/{user_id}/{verdict}/last_submission.txt'
+    last_submission_path = f'data/problems/{problem_id}/submissions/{user_id}/{verdict}/last_submission.txt'
     submission_content, submission_sha, error = get_file(last_submission_path)
     submission_no = 1
     if error and "not found" in error.get("message", "").lower(): # File not found
@@ -74,7 +75,7 @@ def add_submission_to_problem(user_id, problem_id, result):
         return # Or handle the error appropriately
 
     # Changed path to include 'problems'
-    filename_path = f'data/problems/{problem_id}/{user_id}/{verdict}/{submission_no}.json'
+    filename_path = f'data/problems/{problem_id}/submissions/{user_id}/{verdict}/{submission_no}.json'
     add_file(filename_path, content, f'submitted by {user_id}')
     pass
 
@@ -84,8 +85,45 @@ def update_problem_stats(user_id, problem_id, result):
 def update_user_stats(user_id, problem_id, result):
     pass
 
+def get_problem_submissions(problem_id):
+    path = f'{GITHUB_PROBLEMS_SUBMISSIONS_BASE_PATH}/{problem_id}/submissions'
+    contents = get_folder_contents(path)
+    print(path)
+    print(contents)
+
+    if not contents['success']:
+        return {"error": contents['error']}
+
+    submissions = []
+    for file_path, file_content in contents['data'].items():
+        try:
+            # Extract user_id, verdict, and submission_no from the path
+            parts = file_path.split('/')
+            if len(parts) > 5:
+                user_id = parts[3]
+                verdict = parts[4]
+                submission_no = parts[5].split('.')[0]
+
+                submission_data = json.loads(file_content)
+                submissions.append({
+                    "user_id": user_id,
+                    "problem_id": problem_id,
+                    "verdict": verdict,
+                    "submission_no": submission_no,
+                    "submission_data": submission_data
+                })
+        except (json.JSONDecodeError, IndexError):
+            # Ignore files that are not valid JSON or don't match the expected path structure
+            continue
+
+    return submissions
+
 
 def add_submission(problem_id, user_id, result):
     add_submission_to_user(user_id, problem_id, result)
     add_submission_to_problem(user_id, problem_id, result)
     pass
+
+if __name__ == '__main__':
+    print(get_problem_submissions(1))
+    

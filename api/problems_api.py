@@ -5,10 +5,10 @@ import json
 import time
 
 from utils.jwt_token import validate_token
-from services.github_services import get_file
-from config.github_config import GITHUB_PROBLEMS_BASE_PATH
+from services.github_services import get_file, get_folder_contents
+from config.github_config import GITHUB_PROBLEMS_BASE_PATH, GITHUB_PROBLEMS_SUBMISSIONS_BASE_PATH
 from services.judge_service import grade_submission
-from services.submission_service import add_submission
+from services.submission_service import add_submission, get_problem_submissions
 
 # Blueprint declaration
 problems_bp = Blueprint("problems", __name__)
@@ -55,3 +55,12 @@ def submit_problem(id):
     add = add_submission(problem_id, user_id, result)
 
     return jsonify(result)
+
+@problems_bp.route('/<id>/submissions', methods=['GET'])
+def get_problem_submissions(id):
+    """
+    Fetches all submissions for a specific problem.
+    """
+    submissions = get_problem_submissions(id)
+
+    return jsonify(submissions)    
