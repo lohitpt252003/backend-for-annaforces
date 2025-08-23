@@ -4,7 +4,7 @@ import os
 import json
 import time
 
-from utils.jwt_token import validate_token
+
 from services.github_services import get_file, get_folder_contents
 from config.github_config import GITHUB_PROBLEMS_BASE_PATH, GITHUB_PROBLEMS_SUBMISSIONS_BASE_PATH
 from services.judge_service import grade_submission
