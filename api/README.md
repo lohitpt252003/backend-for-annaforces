@@ -80,3 +80,50 @@ This document provides an overview of the available APIs.
   "error": "<error message>"
 }
 ```
+
+**Endpoint:** `/api/problems/<problem_id>/submissions`
+
+**Method:** `GET`
+
+**Description:** Retrieves all submissions for a specific problem. The `problem_id` must have the prefix 'P' (e.g., 'P1').
+
+**URL Parameters:**
+
+- `problem_id`: The ID of the problem to retrieve submissions for.
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+[
+  {
+    "submission_id": "S1",
+    "user_id": "U1",
+    "problem_id": "P1",
+    "timestamp": "2023-10-27T10:00:00Z",
+    "status": "Accepted",
+    "language": "cpp"
+  },
+  {
+    "submission_id": "S2",
+    "user_id": "U2",
+    "problem_id": "P1",
+    "timestamp": "2023-10-27T10:05:00Z",
+    "status": "Wrong Answer",
+    "language": "python"
+  }
+]
+```
+
+**Error Response:**
+
+- **Code:** 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
