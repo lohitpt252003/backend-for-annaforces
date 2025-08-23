@@ -26,7 +26,29 @@ def get_problems():
 
 @problems_bp.route('/<problem_id>', methods=['GET'])
 def get_problem_by_id(problem_id):
-    pass
+    problem_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}"
+    meta_path = f"{problem_path}/meta.json"
+    problem_md_path = f"{problem_path}/problem.md"
+
+    meta_content, _, meta_error = get_file(meta_path)
+    if meta_error:
+        return jsonify({"error": meta_error["message"]}), 500
+
+    problem_md_content, _, problem_md_error = get_file(problem_md_path)
+    if problem_md_error:
+        return jsonify({"error": problem_md_error["message"]}), 500
+
+    try:
+        meta_data = json.loads(meta_content)
+    except json.JSONDecodeError:
+        return jsonify({"error": "Failed to decode meta.json"}), 500
+
+    response_data = {
+        "meta": meta_data,
+        "problem_statement": problem_md_content
+    }
+
+    return jsonify(response_data), 200
 
 @problems_bp.route('/<problem_id>/submit', methods=['POST'])
 def submit_problem(problem_id):
