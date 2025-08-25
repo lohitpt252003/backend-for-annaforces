@@ -23,7 +23,7 @@ def handle_new_submission(problem_id, user_id, language, code):
     # 2. Create main submission files
     submission_dir_path = f"{GITHUB_SUBMISSIONS_BASE_PATH}/{new_submission_id}"
     submission_meta_path = f"{submission_dir_path}/meta.json"
-    code_file_extension = {"python": "py", "cpp": "cpp"}.get(language.lower(), "txt")
+    code_file_extension = {"python": "py", "c++": "cpp", "c": "c"}.get(language.lower(), "txt")
     code_file_path = f"{submission_dir_path}/code.{code_file_extension}"
 
     submission_meta_data = {
