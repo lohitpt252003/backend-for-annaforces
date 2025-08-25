@@ -81,6 +81,52 @@ This document provides an overview of the available APIs.
 }
 ```
 
+**Endpoint:** `/api/problems/<problem_id>/submit`
+
+**Method:** `POST`
+
+**Description:** Submits a solution for a specific problem.
+
+**Request Body:**
+
+```json
+{
+  "user_id": "U1",
+  "language": "python",
+  "code": "print(\"hello world\")",
+  "is_base64_encoded": false
+}
+```
+
+- `user_id` (string, required): The ID of the user submitting the solution.
+- `language` (string, required): The programming language of the solution. Supported languages are `c`, `c++`, and `python`.
+- `code` (string, required): The source code of the solution. Can be plain text or base64 encoded.
+- `is_base64_encoded` (boolean, optional): Set to `true` if the `code` is base64 encoded. Defaults to `false`.
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "message": "Submission successful",
+  "status": "accepted",
+  "submission_id": "S12"
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
 **Endpoint:** `/api/problems/<problem_id>/submissions`
 
 **Method:** `GET`
@@ -127,3 +173,4 @@ This document provides an overview of the available APIs.
   "error": "<error message>"
 }
 ```
+
