@@ -4,7 +4,7 @@ import json
 import tempfile
 import shutil
 
-from services.github_services import get_file
+from services.github_services import get_file, get_folder_contents
 from judge_image_for_annaforces.good_one import execute_code
 
 
@@ -12,44 +12,44 @@ SIZE = 50
 
 def get_testcases(problem_id):
     testcases = []
-    # Path to the file containing the number of test cases
-    num_testcases_file_path = f'data/problems/{problem_id}/testcases/no.txt'
+    testcases_path = f'data/problems/{problem_id}/testcases'
     
-    # Get the content of no.txt
-    number_of_testcases_str, _, error = get_file(num_testcases_file_path)
-    
-    if error:
-        print(f"Error fetching number of test cases for problem {problem_id}: {error.get('message')}")
-        return [] # Return empty list if we can't get the number of test cases
+    contents = get_folder_contents(testcases_path)
 
-    try:
-        number_of_testcases = int(number_of_testcases_str.strip())
-    except (ValueError, TypeError):
-        print(f"Error: Could not parse number of test cases from {num_testcases_file_path}. Content: {number_of_testcases_str}")
+    if not contents['success']:
+        print(f"Error fetching test cases for problem {problem_id}: {contents['error']}")
+        return []
+
+    testcase_files = contents['data']
+    
+    # Find the highest test case number from the .in files
+    max_test_case = 0
+    for filename in testcase_files:
+        if filename.endswith('.in'):
+            try:
+                num = int(os.path.splitext(os.path.basename(filename))[0])
+                if num > max_test_case:
+                    max_test_case = num
+            except ValueError:
+                continue
+
+    if max_test_case == 0:
         return []
 
     print()
     print(SIZE * '=' + " EXTRACTING TESTCASES " + SIZE * '=')
-    for i in range(1, number_of_testcases + 1):
-        input_file_path = f'data/problems/{problem_id}/testcases/{i}.in'
-        output_file_path = f'data/problems/{problem_id}/testcases/{i}.out'
-        
-        stdin_content, _, stdin_error = get_file(input_file_path)
-        stdout_content, _, stdout_error = get_file(output_file_path)
-        
-        if stdin_error:
-            print(f"Error fetching input for test case {i} of problem {problem_id}: {stdin_error.get('message')}")
-            continue # Skip this test case if input is not found
-        if stdout_error:
-            print(f"Error fetching output for test case {i} of problem {problem_id}: {stdout_error.get('message')}")
-            continue # Skip this test case if output is not found
+    for i in range(1, max_test_case + 1):
+        input_filename = f'{testcases_path}/{i}.in'
+        output_filename = f'{testcases_path}/{i}.out'
 
-        testcases.append(
-            {
-                'stdin' : stdin_content,
-                'stdout' : stdout_content.strip()
-            }
-        )
+        if input_filename in testcase_files and output_filename in testcase_files:
+            testcases.append({
+                'stdin': testcase_files[input_filename],
+                'stdout': testcase_files[output_filename].strip()
+            })
+        else:
+            print(f"Warning: Missing input or output file for test case {i}")
+
     print(testcases)
     print(SIZE * '=' + " DONE WITH EXTRACTING TESTCASES " + SIZE * '=')
     print()
@@ -88,7 +88,7 @@ def grade_submission(code, language, problem_id):
         if err:
             if "Compilation Error" in err:
                 test_status = "compilation_error"
-                message = "Compilation Error"
+                message = f"Compilation Error: {stderr}"
             elif "Time Limit Exceeded" in err:
                 test_status = "time_limit_exceeded"
                 message = "Time Limit Exceeded"

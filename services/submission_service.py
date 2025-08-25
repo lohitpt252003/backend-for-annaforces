@@ -1,129 +1,96 @@
 import os, time, json
 import sys
 
+from services.github_services import get_file, add_file, update_file, create_or_update_file
+from services.judge_service import grade_submission
+from config.github_config import GITHUB_PROBLEMS_BASE_PATH, GITHUB_USERS_BASE_PATH, GITHUB_SUBMISSIONS_BASE_PATH
 
-from services.github_services import get_file, add_file, update_file, get_folder_contents
-from config.github_config import GITHUB_PROBLEMS_SUBMISSIONS_BASE_PATH
+def handle_new_submission(problem_id, user_id, language, code):
+    # 1. Get global submission meta to generate a new submission ID
+    global_submissions_meta_path = f"{GITHUB_SUBMISSIONS_BASE_PATH}/meta.json"
+    global_submissions_meta_content, _, global_submissions_meta_error = get_file(global_submissions_meta_path)
 
-def add_submission_to_user(user_id, problem_id, result):
-    verdict = result.get('overall_status', 'other')
-    verdict = verdict.lower()
-    content = json.dumps(
-        {
-            'timestamp' : str(int(time.time())),
-            'result' : result
-        }
-    )
+    if global_submissions_meta_error:
+        return {"error": f"Failed to get global submissions metadata from {global_submissions_meta_path}: {global_submissions_meta_error['message']}"}
 
-    # Changed path to include 'users'
-    last_submission_path = f'data/users/{user_id}/{problem_id}/submissions/{verdict}/last_submission.txt'
-    submission_content, submission_sha, error = get_file(last_submission_path)
-    submission_no = 1
-    if error and "not found" in error.get("message", "").lower(): # File not found
-        add_file(last_submission_path, "1", f'added last_submission.txt')
-    elif submission_content is not None: # File found
-        # Ensure submission_content is a string before converting to int
-        if isinstance(submission_content, bytes):
-            submission_content = submission_content.decode('utf-8') # Decode bytes to string
+    try:
+        global_submissions_meta_data = json.loads(global_submissions_meta_content)
+        new_submission_id_num = global_submissions_meta_data.get("number_of_submissions", 0) + 1
+        new_submission_id = f"S{new_submission_id_num}"
+    except json.JSONDecodeError:
+        return {"error": "Failed to decode global submissions meta.json"}
 
-        try:
-            submission_no = int(submission_content) + 1
-        except ValueError:
-            print(f"Error: Content of {last_submission_path} is not a valid integer: '{submission_content}'")
-            # Reset submission_no to 1 if content is invalid, or handle as appropriate
-            submission_no = 1
-        update_file(last_submission_path, str(submission_no), f'updated last_submission.txt')
-    else: # Other error
-        print(f"Error getting file {last_submission_path}: {error}")
-        return # Or handle the error appropriately
+    # 2. Create main submission files
+    submission_dir_path = f"{GITHUB_SUBMISSIONS_BASE_PATH}/{new_submission_id}"
+    submission_meta_path = f"{submission_dir_path}/meta.json"
+    code_file_extension = {"python": "py", "cpp": "cpp"}.get(language.lower(), "txt")
+    code_file_path = f"{submission_dir_path}/code.{code_file_extension}"
 
-    # Changed path to include 'users'
-    filename_path = f'data/users/{user_id}/{problem_id}/submissions/{verdict}/{submission_no}.json'
-    add_file(filename_path, content, f'submitted for {problem_id}')
-    pass
+    submission_meta_data = {
+        "submission_id": new_submission_id,
+        "user_id": user_id,
+        "problem_id": problem_id,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "status": "Pending",
+        "language": language
+    }
 
-def add_submission_to_problem(user_id, problem_id, result):
-    verdict = result.get('overall_status', 'other')
-    verdict = verdict.lower()
-    content = json.dumps(
-        {
-            'timestamp' : str(int(time.time())),
-            'result' : result
-        }
-    )
+    # Add submission meta.json to the main submissions folder
+    add_meta_result = create_or_update_file(submission_meta_path, json.dumps(submission_meta_data, indent=2), commit_message=f"Add {new_submission_id} meta")
+    if "error" in add_meta_result:
+        return {"error": f"Failed to add submission meta: {add_meta_result['message']}"}
 
-    # Changed path to include 'problems'
-    last_submission_path = f'data/problems/{problem_id}/submissions/{user_id}/{verdict}/last_submission.txt'
-    submission_content, submission_sha, error = get_file(last_submission_path)
-    submission_no = 1
-    if error and "not found" in error.get("message", "").lower(): # File not found
-        add_file(last_submission_path, "1", f'added last_submission.txt')
-    elif submission_content is not None: # File found
-        # Ensure submission_content is a string before converting to int
-        if isinstance(submission_content, bytes):
-            submission_content = submission_content.decode('utf-8') # Decode bytes to string
+    # Add code file to the main submissions folder
+    add_code_result = create_or_update_file(code_file_path, code, commit_message=f"Add {new_submission_id} code")
+    if "error" in add_code_result:
+        return {"error": f"Failed to add submission code: {add_code_result['message']}"}
 
-        try:
-            submission_no = int(submission_content) + 1
-        except ValueError:
-            print(f"Error: Content of {last_submission_path} is not a valid integer: '{submission_content}'")
-            # Reset submission_no to 1 if content is invalid, or handle as appropriate
-            submission_no = 1
-        update_file(last_submission_path, str(submission_no), f'updated last_submission.txt')
-    else: # Other error
-        print(f"Error getting file {last_submission_path}: {error}")
-        return # Or handle the error appropriately
+    # 3. Grade the submission
+    judge_result = grade_submission(code, language, problem_id)
+    submission_meta_data["status"] = judge_result["overall_status"]
+    submission_meta_data["test_results"] = judge_result["test_results"]
 
-    # Changed path to include 'problems'
-    filename_path = f'data/problems/{problem_id}/submissions/{user_id}/{verdict}/{submission_no}.json'
-    add_file(filename_path, content, f'submitted by {user_id}')
-    pass
+    # Update main submission meta.json with judging results
+    update_submission_meta_result = create_or_update_file(submission_meta_path, json.dumps(submission_meta_data, indent=2), commit_message=f"Update {new_submission_id} meta with judging results")
+    if "error" in update_submission_meta_result:
+        return {"error": f"Failed to update submission meta with judging results: {update_submission_meta_result['message']}"}
 
-def update_problem_stats(user_id, problem_id, result):
-    pass
-
-def update_user_stats(user_id, problem_id, result):
-    pass
-
-def get_problem_submissions(problem_id):
-    path = f'{GITHUB_PROBLEMS_SUBMISSIONS_BASE_PATH}/{problem_id}/submissions'
-    contents = get_folder_contents(path)
-    print(path)
-    print(contents)
-
-    if not contents['success']:
-        return {"error": contents['error']}
-
-    submissions = []
-    for file_path, file_content in contents['data'].items():
-        try:
-            # Extract user_id, verdict, and submission_no from the path
-            parts = file_path.split('/')
-            if len(parts) > 5:
-                user_id = parts[3]
-                verdict = parts[4]
-                submission_no = parts[5].split('.')[0]
-
-                submission_data = json.loads(file_content)
-                submissions.append({
-                    "user_id": user_id,
-                    "problem_id": problem_id,
-                    "verdict": verdict,
-                    "submission_no": submission_no,
-                    "submission_data": submission_data
-                })
-        except (json.JSONDecodeError, IndexError):
-            # Ignore files that are not valid JSON or don't match the expected path structure
-            continue
-
-    return submissions
+    # 4. Update Problem Data
+    # Add submission reference to problem
+    problem_submission_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/submissions/{new_submission_id}.json"
+    problem_submission_data = {
+        "submission_id": new_submission_id,
+        "user_id": user_id,
+        "timestamp": submission_meta_data["timestamp"],
+        "status": submission_meta_data["status"]
+    }
+    add_problem_submission_result = add_file(problem_submission_path, json.dumps(problem_submission_data, indent=2), commit_message=f"Add {new_submission_id} to {problem_id} submissions")
+    if "error" in add_problem_submission_result:
+        # Log error but continue
+        print(f"Error adding submission reference to problem: {add_problem_submission_result['message']}")
 
 
-def add_submission(problem_id, user_id, result):
-    add_submission_to_user(user_id, problem_id, result)
-    add_submission_to_problem(user_id, problem_id, result)
-    pass
+    # 5. Update User Data
+    # Add submission reference to user
+    user_submission_path = f"{GITHUB_USERS_BASE_PATH}/{user_id}/submissions/{new_submission_id}.json"
+    user_submission_data = {
+        "submission_id": new_submission_id,
+        "problem_id": problem_id,
+        "timestamp": submission_meta_data["timestamp"],
+        "status": submission_meta_data["status"]
+    }
+    add_user_submission_result = add_file(user_submission_path, json.dumps(user_submission_data, indent=2), commit_message=f"Add {new_submission_id} to {user_id} submissions")
+    if "error" in add_user_submission_result:
+        # Log error but continue
+        print(f"Error adding submission reference to user: {add_user_submission_result['message']}")
 
-if __name__ == '__main__':
-    print(get_problem_submissions(1))
-    
+
+    # 6. Update global submission meta
+    global_submissions_meta_data["number_of_submissions"] = new_submission_id_num
+    update_global_meta_result = create_or_update_file(global_submissions_meta_path, json.dumps(global_submissions_meta_data, indent=2), commit_message=f"Update global submission count to {new_submission_id_num}")
+    if "error" in update_global_meta_result:
+        # Log error but continue
+        print(f"Error updating global submission meta: {update_global_meta_result['message']}")
+
+
+    return {"message": "Submission successful", "submission_id": new_submission_id, "status": submission_meta_data["status"]}

@@ -1,3 +1,4 @@
+import base64
 from flask import Blueprint, jsonify, request
 import sys
 import os
@@ -5,7 +6,8 @@ import json
 import time
 
 
-from services.github_services import get_file, get_folder_contents, add_file
+from services.github_services import get_file, get_folder_contents
+from services.submission_service import handle_new_submission
 from config.github_config import GITHUB_PROBLEMS_BASE_PATH
 
 # Blueprint declaration
@@ -52,7 +54,27 @@ def get_problem_by_id(problem_id):
 
 @problems_bp.route('/<problem_id>/submit', methods=['POST'])
 def submit_problem(problem_id):
-    pass
+    data = request.get_json()
+    user_id = data.get('user_id')
+    language = data.get('language')
+    code = data.get('code')
+    is_base64_encoded = data.get('is_base64_encoded', False)
+
+    if is_base64_encoded:
+        try:
+            code = base64.b64decode(code).decode('utf-8')
+        except (UnicodeDecodeError, base64.binascii.Error):
+            return jsonify({"error": "Invalid base64 encoded code"}), 400
+
+    if not all([user_id, language, code]):
+        return jsonify({"error": "Missing user_id, language, or code in request body"}), 400
+
+    result = handle_new_submission(problem_id, user_id, language, code)
+
+    if "error" in result:
+        return jsonify({"error": result["error"]}), 500
+    
+    return jsonify(result), 200
 
 @problems_bp.route('/<problem_id>/submissions', methods=['GET'])
 def get_problem_submissions(problem_id):
