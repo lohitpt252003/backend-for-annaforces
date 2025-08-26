@@ -60,7 +60,7 @@ def get_file(filename_path):
 
 
 def add_file(filename_path, data, commit_message=None, retries=3):
-    if not filename_path or not data:
+    if not filename_path or data is None:
         return {"error": True, "message": "filename_path and data cannot be empty"}
 
     url = f"{API_BASE}/{filename_path}"
@@ -94,7 +94,7 @@ def add_file(filename_path, data, commit_message=None, retries=3):
 
 
 def update_file(filename_path, data, commit_message=None, retries=3):
-    if not filename_path or not data:
+    if not filename_path or data is None:
         return {"error": True, "message": "filename_path and data cannot be empty"}
 
     url = f"{API_BASE}/{filename_path}"

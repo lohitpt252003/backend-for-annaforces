@@ -8,6 +8,7 @@ import time
 
 from services.github_services import get_file, get_folder_contents
 from services.submission_service import handle_new_submission
+from services.problem_service import add_problem as add_problem_service
 from config.github_config import GITHUB_PROBLEMS_BASE_PATH
 
 # Blueprint declaration
@@ -110,4 +111,20 @@ def get_problem_submissions(problem_id):
 
 @problems_bp.route('/add', methods=['POST'])
 def add_problem():
-    pass
+    problem_data = request.get_json()
+    result = add_problem_service(problem_data)
+
+    if "error" in result:
+        error_message = result["error"]
+        if "Missing required field" in error_message or \
+           "Testcases must be" in error_message or \
+           "is missing 'input' or 'output'" in error_message or \
+           "has empty 'input' or 'output'" in error_message or \
+           "cannot be empty" in error_message or \
+           "Missing required section in problem.md" in error_message:
+            return jsonify({"error": error_message}), 400
+        print(f'problems_api.py {error_message}')
+        return jsonify({"error": error_message}), 500
+
+    return jsonify(result), 201
+
