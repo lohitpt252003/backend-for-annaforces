@@ -23,3 +23,7 @@ The `services/submission_service.py` handles the submission of solutions by user
 ### Judge Service
 
 The `services/judge_service.py` is responsible for evaluating submitted code. It uses a Docker container to create a sandboxed environment for code execution. It retrieves test cases from the `DATA` repository and runs the user's code against them, checking for correctness and resource limits (time and memory).
+
+### Problem Service
+
+The `services/problem_service.py` is responsible for managing problems. It handles the creation of new problems, including validation of the problem data.

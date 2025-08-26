@@ -98,6 +98,55 @@ This document provides an overview of the available APIs.
 }
 ```
 
+**Endpoint:** `/api/problems/add`
+
+**Method:** `POST`
+
+**Description:** Adds a new problem.
+
+**Request Body:**
+
+```json
+{
+  "title": "New Problem",
+  "time_limit": 1,
+  "memory_limit": 256,
+  "difficulty": "Medium",
+  "tags": ["new", "problem"],
+  "authors": ["Gemini"],
+  "description": "# Problem 5: New Problem\n\n## Description\nThis is a new problem.\n\n## Input\n...\n\n## Output\n...\n\n## Constraints\n...\n\n## Example1\n### Input\n...\n### Output\n...\n\n## Explanation\n...",
+  "testcases": [
+    {
+      "input": "...",
+      "output": "..."
+    }
+  ]
+}
+```
+
+**Success Response:**
+
+- **Code:** 201 Created
+- **Content:**
+
+```json
+{
+  "message": "Problem added successfully",
+  "problem_id": "P5"
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
 - `user_id` (string, required): The ID of the user submitting the solution.
 - `language` (string, required): The programming language of the solution. Supported languages are `c`, `c++`, and `python`.
 - `code` (string, required): The source code of the solution. Can be plain text or base64 encoded.
