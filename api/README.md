@@ -180,7 +180,7 @@ This document provides an overview of the available APIs.
 
 **Method:** `GET`
 
-**Description:** Retrieves all submissions for a specific problem. The `problem_id` must have the prefix 'P' (e.g., 'P1').
+**Description:** Retrieves all submissions for a specific problem. The `problem_id` must have the prefix 'P' (e.g., 'P1'). This endpoint efficiently retrieves all submissions for a problem by listing the contents of the submissions directory.
 
 **URL Parameters:**
 

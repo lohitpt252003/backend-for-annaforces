@@ -79,33 +79,21 @@ def submit_problem(problem_id):
 
 @problems_bp.route('/<problem_id>/submissions', methods=['GET'])
 def get_problem_submissions(problem_id):
-    problem_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}"
-    meta_path = f"{problem_path}/meta.json"
+    submissions_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/submissions"
+    
+    folder_contents = get_folder_contents(submissions_path)
 
-    meta_content, _, meta_error = get_file(meta_path)
-    if meta_error:
-        return jsonify({"error": meta_error["message"]}), 500
-
-    try:
-        meta_data = json.loads(meta_content)
-        num_submissions = meta_data.get("number_of_submissions")
-        if num_submissions is None:
-            return jsonify({"error": "number_of_submissions not found in meta.json"}), 500
-    except json.JSONDecodeError:
-        return jsonify({"error": "Failed to decode meta.json"}), 500
+    if not folder_contents.get("success"):
+        return jsonify({"error": folder_contents.get("error", "Failed to get submissions")}), 500
 
     submissions = []
-    for i in range(1, num_submissions + 1):
-        submission_file_path = f"{problem_path}/submissions/S{i}.json"
-        content, _, error = get_file(submission_file_path)
-        if error:
-            print(f"Error fetching {submission_file_path}: {error['message']}")
-            continue
-        try:
-            submissions.append(json.loads(content))
-        except json.JSONDecodeError:
-            print(f"Error decoding JSON for {submission_file_path}")
-            continue
+    for file_path, content in folder_contents["data"].items():
+        if file_path.endswith(".json"):
+            try:
+                submissions.append(json.loads(content))
+            except json.JSONDecodeError:
+                print(f"Error decoding JSON for {file_path}")
+                continue
 
     return jsonify(submissions), 200
 
