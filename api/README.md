@@ -223,3 +223,76 @@ This document provides an overview of the available APIs.
 }
 ```
 
+
+## Users API
+
+**Endpoint:** `/api/users/`
+
+**Method:** `GET`
+
+**Description:** Retrieves a list of all users.
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "U1": {
+    "Name": "Chris Gayle",
+    "username": "boss"
+  },
+  "U2": {
+    "email": "Brendon McCullum",
+    "username": "baz"
+  }
+}
+```
+
+**Error Response:**
+
+- **Code:** 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+**Endpoint:** `/api/users/<user_id>`
+
+**Method:** `GET`
+
+**Description:** Retrieves a specific user by their ID. The `user_id` must have the prefix 'U' (e.g., 'U1').
+
+**URL Parameters:**
+
+- `user_id`: The ID of the user to retrieve.
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "Name": "Test User",
+  "username": "testuser"
+}
+```
+
+**Error Response:**
+
+- **Code:** 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+
+

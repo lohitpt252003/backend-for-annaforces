@@ -5,6 +5,7 @@ import os
 
 
 from api.problems_api import problems_bp
+from api.users_api import users_bp
 
 
 def create_app():
@@ -12,6 +13,7 @@ def create_app():
     CORS(app)
 
     app.register_blueprint(problems_bp, url_prefix='/api/problems')
+    app.register_blueprint(users_bp, url_prefix='/api/users')
 
     @app.route("/")
     def root():
