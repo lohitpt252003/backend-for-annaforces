@@ -332,3 +332,45 @@ This document provides an overview of the available APIs.
   "error": "<error message>"
 }
 ```
+
+
+## Auth API
+
+**Endpoint:** `/api/auth/login`
+
+**Method:** `POST`
+
+**Description:** Authenticates a user by checking for the existence of their `meta.json` file.
+
+**Request Body:**
+
+```json
+{
+  "user_id": "U1"
+}
+```
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "message": "Login successful",
+  "user_id": "U1",
+  "username": "boss",
+  "name": "Chris Gayle"
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request (if `user_id` is missing), 401 Unauthorized (if `meta.json` not found), 500 Internal Server Error (if `meta.json` is invalid)
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```

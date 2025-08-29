@@ -145,7 +145,7 @@ def create_or_update_file(filename_path, data, commit_message=None):
         return update_file(filename_path, data, commit_message)
 
 def get_folder_contents(path):
-    """Return list of file contents inside a GitHub folder."""
+    """Return list of file/folder metadata inside a GitHub folder."""
     url = f"{API_BASE}/{path}"
 
     response = requests.get(url, headers=HEADERS)
@@ -153,18 +153,10 @@ def get_folder_contents(path):
     if response.status_code == 200:
         contents = response.json()
         if isinstance(contents, list):
-            result = {}
-            for item in contents:
-                if item["type"] == "file":
-                    file_path = item["path"]
-                    file_resp = requests.get(item["download_url"])
-                    if file_resp.status_code == 200:
-                        result[file_path] = file_resp.text
-                    else:
-                        result[file_path] = f"Error fetching content: HTTP {file_resp.status_code}"
-            return {"success": True, "data": result}
+            # Return the raw list of contents, which includes 'type', 'name', etc.
+            return {"success": True, "data": contents}
         else:
-            return {"success": False, "error": "Path is not a folder"}
+            return {"success": False, "error": "Path is not a folder or is a file"}
     else:
         return {"success": False, "error": f"GitHub API Error: {response.status_code}, {response.text}"}
 
