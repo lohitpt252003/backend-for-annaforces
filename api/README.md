@@ -183,7 +183,11 @@ This document provides an overview of the available APIs.
 
 **Method:** `GET`
 
-**Description:** Retrieves all submissions for a specific problem. The `problem_id` must have the prefix 'P' (e.g., 'P1'). This endpoint efficiently retrieves all submissions for a problem by listing the contents of the submissions directory.
+**Description:** Retrieves all submissions for a specific problem. Requires a valid JWT in the Authorization header. The `problem_id` must have the prefix 'P' (e.g., 'P1'). This endpoint efficiently retrieves all submissions for a problem by listing the contents of the submissions directory.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
 
 **URL Parameters:**
 
@@ -301,7 +305,11 @@ This document provides an overview of the available APIs.
 
 **Method:** `GET`
 
-**Description:** Retrieves all submissions for a specific user.
+**Description:** Retrieves all submissions for a specific user. Requires a valid JWT in the Authorization header.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
 
 **URL Parameters:**
 

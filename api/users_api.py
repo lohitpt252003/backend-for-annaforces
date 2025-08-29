@@ -4,6 +4,7 @@ import json
 from services.user_service import get_user_by_id as get_user_by_id_service, get_user_submissions as get_user_submissions_service
 from services.github_services import get_file
 from config.github_config import GITHUB_USERS_BASE_PATH
+from api.problems_api import token_required
 
 # Blueprint declaration
 users_bp = Blueprint("users", __name__)
@@ -31,7 +32,8 @@ def get_user_by_id(user_id):
     return jsonify(user), 200
 
 @users_bp.route('/<user_id>/submissions', methods=['GET'])
-def get_user_submissions(user_id):
+@token_required
+def get_user_submissions(current_user, user_id):
     submissions, error = get_user_submissions_service(user_id)
 
     if error:

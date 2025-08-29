@@ -4,6 +4,7 @@ import sys
 import os
 import json
 import time
+import requests
 
 
 from services.github_services import get_file, get_folder_contents, create_or_update_file
@@ -124,40 +125,45 @@ def submit_problem(current_user, problem_id):
     return jsonify(result), 200
 
 @problems_bp.route('/<problem_id>/submissions', methods=['GET'])
-def get_problem_submissions(problem_id):
+@token_required
+def get_problem_submissions(current_user, problem_id):
     submissions_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/submissions"
     
-    folder_contents = get_folder_contents(submissions_path)
+    folder_contents_response = get_folder_contents(submissions_path)
 
-    if not folder_contents.get("success"):
-        return jsonify({"error": folder_contents.get("error", "Failed to get submissions")}), 500
+    if not folder_contents_response.get("success"):
+        return jsonify({"error": folder_contents_response.get("error", "Failed to get submissions")}), 500
 
     submissions = []
-    for file_path, content in folder_contents["data"].items():
-        if file_path.endswith(".json"):
+    for item in folder_contents_response["data"]:
+        if item['type'] == 'file' and item['name'].endswith(".json"):
             try:
-                submissions.append(json.loads(content))
+                file_content_resp = requests.get(item['download_url'])
+                if file_content_resp.status_code == 200:
+                    submissions.append(json.loads(file_content_resp.text))
+                else:
+                    print(f"Error fetching content for {item['path']}: HTTP {file_content_resp.status_code}")
             except json.JSONDecodeError:
-                print(f"Error decoding JSON for {file_path}")
+                print(f"Error decoding JSON for {item['path']}")
                 continue
 
     return jsonify(submissions), 200
 
-@problems_bp.route('/add', methods=['POST'])
-def add_problem():
-    problem_data = request.get_json()
-    result = add_problem_service(problem_data)
+# @problems_bp.route('/add', methods=['POST'])
+# def add_problem():
+#     problem_data = request.get_json()
+#     result = add_problem_service(problem_data)
 
-    if "error" in result:
-        error_message = result["error"]
-        if "Missing required field" in error_message or \
-           "Testcases must be" in error_message or \
-           "is missing 'input' or 'output'" in error_message or \
-           "has empty 'input' or 'output'" in error_message or \
-           "cannot be empty" in error_message or \
-           "Missing required section in problem.md" in error_message:
-            return jsonify({"error": error_message}), 400
-        print(f'problems_api.py {error_message}')
-        return jsonify({"error": error_message}), 500
+#     if "error" in result:
+#         error_message = result["error"]
+#         if "Missing required field" in error_message or \
+#            "Testcases must be" in error_message or \
+#            "is missing 'input' or 'output'" in error_message or \
+#            "has empty 'input' or 'output'" in error_message or \
+#            "cannot be empty" in error_message or \
+#            "Missing required section in problem.md" in error_message:
+#             return jsonify({"error": error_message}), 400
+#         print(f'problems_api.py {error_message}')
+#         return jsonify({"error": error_message}), 500
 
-    return jsonify(result), 201
+#     return jsonify(result), 201
