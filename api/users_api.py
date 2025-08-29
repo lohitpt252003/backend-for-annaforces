@@ -23,7 +23,11 @@ def get_users():
         return jsonify({"error": "Failed to decode JSON"}), 500
 
 @users_bp.route('/<user_id>', methods=['GET'])
-def get_user_by_id(user_id):
+@token_required
+def get_user_by_id(current_user, user_id):
+    if current_user["user_id"] != user_id:
+        return jsonify({"error": "Unauthorized access"}), 403
+
     user, error = get_user_by_id_service(user_id)
 
     if error:
