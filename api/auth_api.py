@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 import json
 from services.github_services import get_folder_contents, get_file
 from config.github_config import GITHUB_USERS_BASE_PATH
+from utils.jwt_token import generate_token
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -23,11 +24,15 @@ def login():
             username = meta_data.get('username')
             name = meta_data.get('name')
 
+            # Generate token
+            token = generate_token(returned_user_id, username, name)
+
             return jsonify({
                 "message": "Login successful",
                 "user_id": returned_user_id,
                 "username": username,
-                "name": name
+                "name": name,
+                "token": token # Include the token in the response
             }), 200
         except json.JSONDecodeError:
             return jsonify({"error": "Invalid user metadata"}), 500

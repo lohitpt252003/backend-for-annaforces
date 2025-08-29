@@ -360,7 +360,8 @@ This document provides an overview of the available APIs.
   "message": "Login successful",
   "user_id": "U1",
   "username": "boss",
-  "name": "Chris Gayle"
+  "name": "Chris Gayle",
+  "token": "<token>"
 }
 ```
 
