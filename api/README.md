@@ -65,10 +65,14 @@ This document provides an overview of the available APIs.
 ```json
 {
   "meta": {
+    "id": "P1",
+    "memoryLimit": 256,
+    "number_of_submissions": 2,
+    "timeLimit": 1000,
     "title": "Add",
-    "difficulty": "Easy",
     "tags": ["easy", "input", "output"],
-    "authors": ["boss", "baz"]
+    "authors": ["boss", "baz"],
+    "difficulty": "Easy"
   },
   "problem_statement": "<problem statement in markdown>"
 }
