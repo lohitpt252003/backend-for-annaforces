@@ -280,7 +280,11 @@ This document provides an overview of the available APIs.
 
 **Method:** `GET`
 
-**Description:** Retrieves a specific user by their ID. The `user_id` must have the prefix 'U' (e.g., 'U1').
+**Description:** Retrieves a specific user by their ID. Requires a valid JWT in the Authorization header. The `user_id` in the URL must match the `user_id` in the provided token. The `user_id` must have the prefix 'U' (e.g., 'U1').
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
 
 **URL Parameters:**
 
@@ -300,7 +304,7 @@ This document provides an overview of the available APIs.
 
 **Error Response:**
 
-- **Code:** 500 Internal Server Error
+- **Code:** 401 Unauthorized (if token is missing or invalid), 403 Forbidden (if user_id in token does not match user_id in URL), 500 Internal Server Error
 - **Content:**
 
 ```json
@@ -313,7 +317,7 @@ This document provides an overview of the available APIs.
 
 **Method:** `GET`
 
-**Description:** Retrieves all submissions for a specific user. Requires a valid JWT in the Authorization header.
+**Description:** Retrieves all submissions for a specific user. Requires a valid JWT in the Authorization header. Any authenticated user can view any other user's submissions.
 
 **Authorization Header:**
 
@@ -343,7 +347,7 @@ This document provides an overview of the available APIs.
 
 **Error Response:**
 
-- **Code:** 500 Internal Server Error
+- **Code:** 401 Unauthorized (if token is missing or invalid), 500 Internal Server Error
 - **Content:**
 
 ```json
