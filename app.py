@@ -7,6 +7,7 @@ import os
 from api.problems_api import problems_bp
 from api.users_api import users_bp
 from api.auth_api import auth_bp
+from api.submissions_api import submissions_bp
 
 
 def create_app():
@@ -16,6 +17,7 @@ def create_app():
     app.register_blueprint(problems_bp, url_prefix='/api/problems')
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(submissions_bp, url_prefix='/api/submissions')
 
     @app.route("/")
     def root():
