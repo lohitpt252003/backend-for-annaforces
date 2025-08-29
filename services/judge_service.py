@@ -3,6 +3,7 @@ import os
 import json
 import tempfile
 import shutil
+import requests
 
 from services.github_services import get_file, get_folder_contents
 from judge_image_for_annaforces.good_one import execute_code
@@ -14,20 +15,25 @@ def get_testcases(problem_id):
     testcases = []
     testcases_path = f'data/problems/{problem_id}/testcases'
     
-    contents = get_folder_contents(testcases_path)
+    contents_response = get_folder_contents(testcases_path)
 
-    if not contents['success']:
-        print(f"Error fetching test cases for problem {problem_id}: {contents['error']}")
+    if not contents_response['success']:
+        print(f"Error fetching test cases for problem {problem_id}: {contents_response['error']}")
         return []
 
-    testcase_files = contents['data']
+    contents_list = contents_response['data']
     
-    # Find the highest test case number from the .in files
+    file_download_urls = {}
+    for item in contents_list:
+        if item['type'] == 'file':
+            file_download_urls[item['path']] = item['download_url']
+
     max_test_case = 0
-    for filename in testcase_files:
-        if filename.endswith('.in'):
+    for filename_path in file_download_urls.keys():
+        if filename_path.endswith('.in'):
             try:
-                num = int(os.path.splitext(os.path.basename(filename))[0])
+                base_filename = os.path.basename(filename_path)
+                num = int(os.path.splitext(base_filename)[0])
                 if num > max_test_case:
                     max_test_case = num
             except ValueError:
@@ -39,14 +45,20 @@ def get_testcases(problem_id):
     print()
     print(SIZE * '=' + " EXTRACTING TESTCASES " + SIZE * '=')
     for i in range(1, max_test_case + 1):
-        input_filename = f'{testcases_path}/{i}.in'
-        output_filename = f'{testcases_path}/{i}.out'
+        input_file_full_path = f'{testcases_path}/{i}.in'
+        output_file_full_path = f'{testcases_path}/{i}.out'
 
-        if input_filename in testcase_files and output_filename in testcase_files:
-            testcases.append({
-                'stdin': testcase_files[input_filename],
-                'stdout': testcase_files[output_filename].strip()
-            })
+        if input_file_full_path in file_download_urls and output_file_full_path in file_download_urls:
+            input_content_resp = requests.get(file_download_urls[input_file_full_path])
+            output_content_resp = requests.get(file_download_urls[output_file_full_path])
+
+            if input_content_resp.status_code == 200 and output_content_resp.status_code == 200:
+                testcases.append({
+                    'stdin': input_content_resp.text,
+                    'stdout': output_content_resp.text.strip()
+                })
+            else:
+                print(f"Warning: Failed to fetch content for test case {i}")
         else:
             print(f"Warning: Missing input or output file for test case {i}")
 

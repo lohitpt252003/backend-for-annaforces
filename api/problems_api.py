@@ -10,9 +10,29 @@ from services.github_services import get_file, get_folder_contents, create_or_up
 from services.submission_service import handle_new_submission
 from services.problem_service import add_problem as add_problem_service
 from config.github_config import GITHUB_PROBLEMS_BASE_PATH, GITHUB_USERS_BASE_PATH
+from utils.jwt_token import validate_token
+from functools import wraps
 
 # Blueprint declaration
 problems_bp = Blueprint("problems", __name__)
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if 'Authorization' in request.headers:
+            token = request.headers['Authorization'].split(" ")[1]
+
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 401
+
+        result = validate_token(token)
+        if not result['valid']:
+            return jsonify({'message': result['error']}), 401
+
+        current_user = result['data']
+        return f(current_user, *args, **kwargs)
+    return decorated
 
 def update_meta_submissions(meta_path):
     content, _, error = get_file(meta_path)
@@ -73,9 +93,10 @@ def get_problem_by_id(problem_id):
     return jsonify(response_data), 200
 
 @problems_bp.route('/<problem_id>/submit', methods=['POST'])
-def submit_problem(problem_id):
+@token_required
+def submit_problem(current_user, problem_id):
     data = request.get_json()
-    user_id = data.get('user_id')
+    user_id = current_user['user_id']
     language = data.get('language')
     code = data.get('code')
     is_base64_encoded = data.get('is_base64_encoded', False)
@@ -86,15 +107,14 @@ def submit_problem(problem_id):
         except (UnicodeDecodeError, base64.binascii.Error):
             return jsonify({"error": "Invalid base64 encoded code"}), 400
 
-    if not all([user_id, language, code]):
-        return jsonify({"error": "Missing user_id, language, or code in request body"}), 400
+    if not all([language, code]):
+        return jsonify({"error": "Missing language or code in request body"}), 400
 
     result = handle_new_submission(problem_id, user_id, language, code)
 
     if "error" in result:
         return jsonify({"error": result["error"]}), 500
     
-    # Update user and problem meta data
     user_meta_path = f"{GITHUB_USERS_BASE_PATH}/{user_id}/meta.json"
     problem_meta_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/meta.json"
 

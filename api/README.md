@@ -85,13 +85,16 @@ This document provides an overview of the available APIs.
 
 **Method:** `POST`
 
-**Description:** Submits a solution for a specific problem. When a solution is submitted, the `number_of_submissions` is automatically incremented for both the user and the problem. All related file changes in the `DATA` repository are committed with a message prefixed with `[AUTO]`.
+**Description:** Submits a solution for a specific problem. Requires a valid JWT in the Authorization header. When a solution is submitted, the `number_of_submissions` is automatically incremented for both the user and the problem. All related file changes in the `DATA` repository are committed with a message prefixed with `[AUTO]`.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
 
 **Request Body:**
 
 ```json
 {
-  "user_id": "U1",
   "language": "python",
   "code": "print(\"hello world\")",
   "is_base64_encoded": false
