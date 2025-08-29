@@ -386,3 +386,67 @@ This document provides an overview of the available APIs.
   "error": "<error message>"
 }
 ```
+
+## Submissions API
+
+**Endpoint:** `/api/submissions/<submission_id>`
+
+**Method:** `GET`
+
+**Description:** Retrieves a specific submission by its ID, including the submitted code and language. Requires a valid JWT in the Authorization header.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**URL Parameters:**
+
+- `submission_id`: The ID of the submission to retrieve.
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "code": "#include <stdio.h>\nint main() { int a, b; scanf(\" %d %d \", &a, &b); printf(\" %d \", a + b); return 0; }",
+  "language": "c",
+  "problem_id": "P1",
+  "status": "accepted",
+  "submission_id": "S1",
+  "test_results": [
+    {
+      "actual_output": " 2 ",
+      "execution_time": 0.0,
+      "expected_output": "2",
+      "memory_usage": 1.47265625,
+      "message": "Test case passed",
+      "status": "passed",
+      "test_case_number": 1
+    },
+    {
+      "actual_output": " 4 ",
+      "execution_time": 0.0,
+      "expected_output": "4",
+      "memory_usage": 1.58984375,
+      "message": "Test case passed",
+      "status": "passed",
+      "test_case_number": 2
+    }
+  ],
+  "timestamp": "2025-08-29T06:36:40Z",
+  "user_id": "U1"
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized (if token is missing or invalid), 500 Internal Server Error (if submission not found or metadata is invalid)
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
