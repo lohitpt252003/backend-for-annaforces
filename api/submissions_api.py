@@ -3,12 +3,14 @@ import json
 
 from services.github_services import get_file
 from config.github_config import GITHUB_SUBMISSIONS_BASE_PATH
+from api.problems_api import token_required
 
 # Blueprint declaration
 submissions_bp = Blueprint("submissions", __name__)
 
 @submissions_bp.route('/<submission_id>', methods=['GET'])
-def get_submission_by_id(submission_id):
+@token_required
+def get_submission_by_id(current_user, submission_id):
     submission_meta_path = f"{GITHUB_SUBMISSIONS_BASE_PATH}/{submission_id}/meta.json"
     
     meta_content, _, meta_error = get_file(submission_meta_path)
