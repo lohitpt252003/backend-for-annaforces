@@ -6,13 +6,32 @@ import json
 import time
 
 
-from services.github_services import get_file, get_folder_contents
+from services.github_services import get_file, get_folder_contents, create_or_update_file
 from services.submission_service import handle_new_submission
 from services.problem_service import add_problem as add_problem_service
-from config.github_config import GITHUB_PROBLEMS_BASE_PATH
+from config.github_config import GITHUB_PROBLEMS_BASE_PATH, GITHUB_USERS_BASE_PATH
 
 # Blueprint declaration
 problems_bp = Blueprint("problems", __name__)
+
+def update_meta_submissions(meta_path):
+    content, _, error = get_file(meta_path)
+    
+    if error:
+        # If file not found, create it
+        if "not found" in error.get("message", "").lower():
+            meta_data = {"number_of_submissions": 1}
+            create_or_update_file(meta_path, json.dumps(meta_data, indent=4), commit_message=f"[AUTO] Create meta file for {meta_path}")
+        return
+
+    try:
+        meta_data = json.loads(content)
+        meta_data["number_of_submissions"] = meta_data.get("number_of_submissions", 0) + 1
+        create_or_update_file(meta_path, json.dumps(meta_data, indent=4), commit_message=f"[AUTO] Update submission count for {meta_path}")
+    except json.JSONDecodeError:
+        # Handle case where file is empty or has invalid json
+        meta_data = {"number_of_submissions": 1}
+        create_or_update_file(meta_path, json.dumps(meta_data, indent=4), commit_message=f"[AUTO] Create meta file for {meta_path}")
 
 @problems_bp.route('/', methods=['GET'])
 def get_problems():
@@ -75,6 +94,13 @@ def submit_problem(problem_id):
     if "error" in result:
         return jsonify({"error": result["error"]}), 500
     
+    # Update user and problem meta data
+    user_meta_path = f"{GITHUB_USERS_BASE_PATH}/{user_id}/meta.json"
+    problem_meta_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/meta.json"
+
+    update_meta_submissions(user_meta_path)
+    update_meta_submissions(problem_meta_path)
+    
     return jsonify(result), 200
 
 @problems_bp.route('/<problem_id>/submissions', methods=['GET'])
@@ -115,4 +141,3 @@ def add_problem():
         return jsonify({"error": error_message}), 500
 
     return jsonify(result), 201
-
