@@ -294,5 +294,44 @@ This document provides an overview of the available APIs.
 }
 ```
 
+**Endpoint:** `/api/users/<user_id>/submissions`
+
+**Method:** `GET`
+
+**Description:** Retrieves all submissions for a specific user.
+
+**URL Parameters:**
+
+- `user_id`: The ID of the user to retrieve submissions for.
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+[
+  {
+    "submission_id": "S1",
+    "user_id": "U1",
+    "problem_id": "P1",
+    "timestamp": "2023-10-27T10:00:00Z",
+    "status": "Accepted",
+    "language": "cpp"
+  }
+]
+```
+
+**Error Response:**
+
+- **Code:** 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
 
 

@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 import json
 
-from services.user_service import get_user_by_id as get_user_by_id_service
+from services.user_service import get_user_by_id as get_user_by_id_service, get_user_submissions as get_user_submissions_service
 from services.github_services import get_file
 from config.github_config import GITHUB_USERS_BASE_PATH
 
@@ -29,3 +29,12 @@ def get_user_by_id(user_id):
         return jsonify({"error": error["error"]}), 500
 
     return jsonify(user), 200
+
+@users_bp.route('/<user_id>/submissions', methods=['GET'])
+def get_user_submissions(user_id):
+    submissions, error = get_user_submissions_service(user_id)
+
+    if error:
+        return jsonify({"error": error["error"]}), 500
+
+    return jsonify(submissions), 200
