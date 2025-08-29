@@ -85,7 +85,7 @@ This document provides an overview of the available APIs.
 
 **Method:** `POST`
 
-**Description:** Submits a solution for a specific problem.
+**Description:** Submits a solution for a specific problem. When a solution is submitted, the `number_of_submissions` is automatically incremented for both the user and the problem. All related file changes in the `DATA` repository are committed with a message prefixed with `[AUTO]`.
 
 **Request Body:**
 
@@ -332,6 +332,3 @@ This document provides an overview of the available APIs.
   "error": "<error message>"
 }
 ```
-
-
-

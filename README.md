@@ -20,6 +20,17 @@ To use the GitHub service, you need to set the following environment variables i
 
 The `services/submission_service.py` handles the submission of solutions by users. It orchestrates the process of receiving a submission, saving it, judging it, and updating the relevant data.
 
+#### Submission Flow
+
+When a user submits a solution, the following steps are performed:
+
+1.  A new submission ID is generated.
+2.  The submission metadata and code are saved to the `DATA` repository.
+3.  The submission is graded by the Judge Service.
+4.  The submission status is updated with the judging result.
+5.  The `number_of_submissions` is incremented in the corresponding user's and problem's `meta.json` files.
+6.  All file operations are committed with a commit message prefixed with `[AUTO]`.
+
 ### Judge Service
 
 The `services/judge_service.py` is responsible for evaluating submitted code. It uses a Docker container to create a sandboxed environment for code execution. It retrieves test cases from the `DATA` repository and runs the user's code against them, checking for correctness and resource limits (time and memory).
