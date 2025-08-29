@@ -55,7 +55,8 @@ def update_meta_submissions(meta_path):
         create_or_update_file(meta_path, json.dumps(meta_data, indent=4), commit_message=f"[AUTO] Create meta file for {meta_path}")
 
 @problems_bp.route('/', methods=['GET'])
-def get_problems():
+@token_required
+def get_problems(current_user):
     file_path = f"{GITHUB_PROBLEMS_BASE_PATH}/index.json"
     content, _, error = get_file(file_path)
 

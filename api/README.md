@@ -8,7 +8,11 @@ This document provides an overview of the available APIs.
 
 **Method:** `GET`
 
-**Description:** Retrieves a list of all problems.
+**Description:** Retrieves a list of all problems. Requires a valid JWT in the Authorization header.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
 
 **Success Response:**
 
@@ -34,7 +38,7 @@ This document provides an overview of the available APIs.
 
 **Error Response:**
 
-- **Code:** 500 Internal Server Error
+- **Code:** 401 Unauthorized (if token is missing or invalid), 500 Internal Server Error
 - **Content:**
 
 ```json
