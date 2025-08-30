@@ -80,7 +80,7 @@ This document provides an overview of the available APIs.
 
 **Error Response:**
 
-- **Code:** 500 Internal Server Error
+- **Code:** 404 Not Found (if problem not found), 500 Internal Server Error
 - **Content:**
 
 ```json
@@ -89,7 +89,8 @@ This document provides an overview of the available APIs.
 }
 ```
 
-**Endpoint:** `/api/problems/<problem_id>/submit`
+Possible error messages:
+- `Problem not found`
 
 **Method:** `POST`
 
@@ -460,7 +461,7 @@ Possible error messages:
 
 **Error Response:**
 
-- **Code:** 401 Unauthorized (if token is missing or invalid), 500 Internal Server Error (if submission not found or metadata is invalid)
+- **Code:** 401 Unauthorized (if token is missing or invalid), 404 Not Found (if submission not found), 500 Internal Server Error
 - **Content:**
 
 ```json
@@ -468,3 +469,6 @@ Possible error messages:
   "error": "<error message>"
 }
 ```
+
+Possible error messages:
+- `Submission not found`

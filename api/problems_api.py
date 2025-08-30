@@ -78,6 +78,8 @@ def get_problem_by_id(current_user, problem_id):
 
     meta_content, _, meta_error = get_file(meta_path)
     if meta_error:
+        if "not found" in meta_error["message"].lower():
+            return jsonify({"error": "Problem not found"}), 404
         return jsonify({"error": meta_error["message"]}), 500
 
     problem_md_content, _, problem_md_error = get_file(problem_md_path)

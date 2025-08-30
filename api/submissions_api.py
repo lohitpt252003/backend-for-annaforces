@@ -16,6 +16,8 @@ def get_submission_by_id(current_user, submission_id):
     meta_content, _, meta_error = get_file(submission_meta_path)
 
     if meta_error:
+        if "not found" in meta_error["message"].lower():
+            return jsonify({"error": "Submission not found"}), 404
         return jsonify({"error": meta_error["message"]}), 500
 
     try:

@@ -16,6 +16,16 @@ To use the GitHub service, you need to set the following environment variables i
 - `GITHUB_REPO`: The name of the GitHub repository where the data is stored.
 - `GITHUB_OWNER`: The owner of the GitHub repository.
 
+### Firebase Service
+
+The `services/firebase_service.py` handles user authentication and management using Google Firebase Firestore. It provides functionalities for adding, retrieving, and verifying user credentials.
+
+#### Environment Variables
+
+To use the Firebase service, you need to set the following environment variable in a `.env` file in the root of the `backend-for-annaforces` directory:
+
+- `FIREBASE_DB_CREDENTIALS`: The JSON content of your Firebase service account key. This should be a single, unquoted JSON string.
+
 ### Submission Service
 
 The `services/submission_service.py` handles the submission of solutions by users. It orchestrates the process of receiving a submission, saving it, judging it, and updating the relevant data.
@@ -38,3 +48,9 @@ The `services/judge_service.py` is responsible for evaluating submitted code. It
 ### Problem Service
 
 The `services/problem_service.py` is responsible for managing problems. It handles the creation of new problems, including validation of the problem data.
+
+## API Endpoints
+
+### Auth API
+
+The `/api/auth/login` endpoint handles user authentication. It expects a `user_id` and `password` in the request body. Upon successful authentication, it returns a JWT token. If the user is not registered, a specific error message is returned.
