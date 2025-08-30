@@ -50,27 +50,27 @@ def get_user(user_id):
     else:
         return None, None
 
-def add_user(user_id, password):
-    """Adds a new user to the Firestore database with a hashed password.
+# def add_user(user_id, password):
+#     """Adds a new user to the Firestore database with a hashed password.
 
-    Args:
-        user_id (str): The ID of the new user.
-        password (str): The password for the new user.
+#     Args:
+#         user_id (str): The ID of the new user.
+#         password (str): The password for the new user.
 
-    Returns:
-        tuple: A tuple containing a success boolean and an error message (str).
-               Returns (None, error_message) if there is an error.
-               Returns (True, None) on success.
-    """
-    if not db:
-        return None, "Database not initialized. FIREBASE_DB_JSON_PATH not set."
-    # Hash the password before storing it
-    hashed_password = ph.hash(password)
-    doc_ref = db.collection(u'users').document(user_id)
-    doc_ref.set({
-        u'password': hashed_password
-    })
-    return True, None
+#     Returns:
+#         tuple: A tuple containing a success boolean and an error message (str).
+#                Returns (None, error_message) if there is an error.
+#                Returns (True, None) on success.
+#     """
+#     if not db:
+#         return None, "Database not initialized. FIREBASE_DB_JSON_PATH not set."
+#     # Hash the password before storing it
+#     hashed_password = ph.hash(password)
+#     doc_ref = db.collection(u'users').document(user_id)
+#     doc_ref.set({
+#         u'password': hashed_password
+#     })
+#     return True, None
 
 def verify_user(user_id, password):
     """Verifies the password of an existing user.
@@ -100,4 +100,4 @@ def verify_user(user_id, password):
             return False, None
     else:
         # User not found
-        return False, None
+        return False, "User not registered"

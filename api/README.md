@@ -363,13 +363,14 @@ This document provides an overview of the available APIs.
 
 **Method:** `POST`
 
-**Description:** Authenticates a user by checking for the existence of their `meta.json` file.
+**Description:** Authenticates a user with provided `user_id` and `password`.
 
 **Request Body:**
 
 ```json
 {
-  "user_id": "U1"
+  "user_id": "U1",
+  "password": "your_password"
 }
 ```
 
@@ -390,7 +391,7 @@ This document provides an overview of the available APIs.
 
 **Error Response:**
 
-- **Code:** 400 Bad Request (if `user_id` is missing), 401 Unauthorized (if `meta.json` not found), 500 Internal Server Error (if `meta.json` is invalid)
+- **Code:** 400 Bad Request (if `user_id` or `password` is missing), 401 Unauthorized (if credentials are invalid or user not registered), 500 Internal Server Error (if `meta.json` is invalid)
 - **Content:**
 
 ```json
@@ -398,6 +399,11 @@ This document provides an overview of the available APIs.
   "error": "<error message>"
 }
 ```
+
+Possible error messages:
+- `User ID and password are required`
+- `Invalid credentials`
+- `You are not registered, contact admin`
 
 ## Submissions API
 
