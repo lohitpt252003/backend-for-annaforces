@@ -2,6 +2,10 @@
 
 This is the backend for the Annaforces project.
 
+## Deployment
+
+The backend is deployed at: `https://backend-for-annaforces.onrender.com/`
+
 ## Services
 
 ### GitHub Service
@@ -54,3 +58,10 @@ The `services/problem_service.py` is responsible for managing problems. It handl
 ### Auth API
 
 The `/api/auth/login` endpoint handles user authentication. It expects a `user_id` and `password` in the request body. Upon successful authentication, it returns a JWT token. If the user is not registered, a specific error message is returned.
+
+**Example to get a token:**
+
+```bash
+curl -X POST -H "Content-Type: application/json" -d "{\"user_id\": \"U1\", \"password\": \"1234\"}" https://backend-for-annaforces.onrender.com/api/auth/login
+```
+
