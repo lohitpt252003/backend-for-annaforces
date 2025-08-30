@@ -1,0 +1,274 @@
+\documentclass{article}
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{amssymb} % For the square symbol in the To-Do list
+\usepackage{tabularx}
+\usepackage{enumitem}
+
+% Hyperlink setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+    pdftitle={Judge Image for Annaforces},
+}
+
+% Code listing style
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.95}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\footnotesize\ttfamily,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=none,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+% Custom JSON language definition for listings
+\lstdefinelanguage{json}{
+    basicstyle=\normalfont\ttfamily\footnotesize,
+    string=[s]{"}{"},
+    comment=[l]{:\ "},
+    commentstyle=\color{black},
+    morekeywords={true,false,null},
+    keywordstyle=\color{blue},
+    stringstyle=\color{codepurple},
+    showstringspaces=false
+}
+
+% Title and author
+\title{Judge Image for Annaforces}
+\author{\href{https://opensource.org/licenses/MIT}{License: MIT}}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+A secure and isolated environment for executing untrusted code, primarily for use in competitive programming platforms or online judges. It uses Docker to create a sandbox that restricts resource usage (CPU time, memory) and prevents malicious code from affecting the host system.
+
+\section{Features}
+\begin{itemize}
+    \item \textbf{Language Support:} Executes code written in C, C++, and Python.
+    \item \textbf{Resource Limiting:} Enforces time and memory limits on code execution.
+    \item \textbf{Secure Sandboxing:} Uses Docker containers to isolate the execution environment.
+    \item \textbf{Detailed Results:} Provides detailed information about the execution, including:
+    \begin{itemize}
+        \item Standard output and standard error.
+        \item Execution time and memory usage.
+        \item Status (Success, Compilation Error, Runtime Error, Time Limit Exceeded, Memory Limit Exceeded).
+    \end{itemize}
+\end{itemize}
+
+\section{Getting Started}
+
+\subsection{Prerequisites}
+\begin{itemize}
+    \item \textbf{Docker:} You must have Docker installed and running on your system.
+\end{itemize}
+
+\subsection{Installation}
+\begin{enumerate}
+    \item Clone the repository:
+    \begin{lstlisting}[language=bash]
+git clone https://github.com/lohitpt252003/judge-image-for-annaforces.git
+    \end{lstlisting}
+    \item Navigate to the project directory:
+    \begin{lstlisting}[language=bash]
+cd judge-image-for-annaforces
+    \end{lstlisting}
+\end{enumerate}
+
+\section{Examples}
+
+\subsection{Example 1: Successful Python Execution}
+\begin{lstlisting}[language=Python]
+from good_one import execute_code
+import json
+
+python_code = """
+import sys
+name = sys.stdin.readline()
+print(f"Hello, {name.strip()}!")
+"""
+
+result = execute_code(
+    language='python',
+    code=python_code,
+    stdin='World',
+    time_limit_s=5,
+    memory_limit_mb=128
+)
+
+print(json.dumps(result, indent=2))
+\end{lstlisting}
+
+\textbf{Output:}
+\begin{lstlisting}[language=json]
+{
+  "stdout": "Hello, World!",
+  "stderr": "",
+  "err": "",
+  "timetaken": 0.0,
+  "memorytaken": 3.68359375,
+  "success": true
+}
+\end{lstlisting}
+
+\subsection{Example 2: C++ Code with a Runtime Error}
+\begin{lstlisting}[language=Python]
+from good_one import execute_code
+import json
+
+cpp_code = """
+#include <iostream>
+#include <vector>
+int main() {
+    std::vector<int> v;
+    std::cout << v.at(10); // This will throw an exception
+    return 0;
+}
+"""
+
+result = execute_code(language='c++', code=cpp_code, stdin='', time_limit_s=5, memory_limit_mb=128)
+
+print(json.dumps(result, indent=2))
+\end{lstlisting}
+
+\textbf{Output:}
+\begin{lstlisting}[language=json]
+{
+  "stdout": "",
+  "stderr": "",
+  "err": "Runtime Error (Exit Code: 134)",
+  "timetaken": 0.0,
+  "memorytaken": 0.0,
+  "success": false
+}
+\end{lstlisting}
+
+\section{API Reference}
+
+\subsection{\texttt{execute\_code()}}
+\begin{table}[h!]
+    \centering
+    \begin{tabularx}{\textwidth}{|l|X|l|}
+        \hline
+        \textbf{Argument} & \textbf{Description} & \textbf{Default Value} \\
+        \hline
+        \texttt{language} & The programming language (`c`, `c++`, `python`). & \texttt{'python'} \\
+        \hline
+        \texttt{code} & The source code to execute. & \texttt{"print(\dots{})"} \\
+        \hline
+        \texttt{stdin} & The standard input for the code. & \texttt{''} \\
+        \hline
+        \texttt{time\_limit\_s} & The time limit in seconds. & \texttt{2} \\
+        \hline
+        \texttt{memory\_limit\_mb} & The memory limit in megabytes. & \texttt{1024} \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\textbf{Returns:} A dictionary containing the execution results with the following keys:
+\begin{itemize}
+    \item \texttt{stdout} (str): The standard output of the code.
+    \item \texttt{stderr} (str): The standard error of the code.
+    \item \texttt{err} (str): An error message if an error occurred.
+    \item \texttt{timetaken} (float): The time taken for the code to execute in seconds.
+    \item \texttt{memorytaken} (float): The memory used by the code in megabytes.
+    \item \texttt{success} (bool): Whether the code executed successfully.
+\end{itemize}
+
+\section{How It Works}
+The core logic is in the \texttt{execute\_code} function within \texttt{good\_one.py}. Here's a breakdown of the process:
+\begin{enumerate}
+    \item \textbf{Input Validation:} Checks if the requested programming language is supported.
+    \item \textbf{Docker Setup:}
+    \begin{itemize}
+        \item Verifies that Docker is running.
+        \item Checks if the required Docker image (\texttt{sandbox-image:latest}) exists.
+        \item If the image is not found, it builds it dynamically from a simple \texttt{Dockerfile} definition.
+    \end{itemize}
+    \item \textbf{File Preparation:}
+    \begin{itemize}
+        \item Creates a temporary directory on the host machine.
+        \item Saves the user's source code and standard input to files within this directory.
+    \end{itemize}
+    \item \textbf{Container Management:}
+    \begin{itemize}
+        \item Starts a detached Docker container from the \texttt{sandbox-image}.
+        \item Copies the source code and input files into the container.
+    \end{itemize}
+    \item \textbf{Code Compilation (for C/C++):}
+    \begin{itemize}
+        \item If the language is C or C++, it compiles the code inside the container using \texttt{gcc} or \texttt{g++}.
+        \item If compilation fails, it returns a "Compilation Error."
+    \end{itemize}
+    \item \textbf{Code Execution:}
+    \begin{itemize}
+        \item Executes the compiled binary (for C/C++) or the Python script.
+        \item The execution is wrapped with \texttt{/usr/bin/time -v} to measure resource usage and \texttt{timeout} to enforce the time limit.
+    \end{itemize}
+    \item \textbf{Result Parsing:}
+    \begin{itemize}
+        \item Captures the standard output, standard error, and exit code of the process.
+        \item Parses the output of \texttt{/usr/bin/time -v} to extract the execution time and memory consumption.
+        \item Determines the final status based on the exit code (e.g., exit code 124 indicates a timeout).
+    \end{itemize}
+    \item \textbf{Cleanup:}
+    \begin{itemize}
+        \item Stops and removes the Docker container.
+        \item Deletes the temporary directory from the host.
+    \end{itemize}
+\end{enumerate}
+
+\section{To-Do / Improvements}
+\begin{itemize}[label={$\square$}]
+    \item Add support for more languages (e.g., Java, Go, Rust).
+    \item Implement a more robust queueing system for handling multiple submissions.
+    \item Enhance security by running the code as a non-root user inside the container.
+    \item Improve the accuracy of resource measurement.
+    \item Create a REST API wrapper around the execution logic.
+    \item Add more comprehensive unit and integration tests.
+    \item Parameterize the Docker image name and other constants.
+\end{itemize}
+
+\section{Contributing}
+Contributions are welcome! Please feel free to submit a pull request.
+
+\section{Authors}
+\begin{itemize}
+    \item \href{https://github.com/lohitpt252003}{Lohit P Talavar}
+    \item \href{https://github.com/adarshmishra121}{Adarsh Mishra}
+    \item \href{https://github.com/MeenaPriyanshi}{Priyanshi Meena}
+\end{itemize}
+
+\section{License}
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+\section{Credits}
+\begin{itemize}
+    \item Python
+    \item Docker
+    \item Linux (Ubuntu)
+\end{itemize}
+
+\end{document}
