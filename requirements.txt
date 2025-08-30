@@ -3,3 +3,5 @@ flask_cors
 dotenv
 requests
 pyjwt
+firebase-admin
+argon2-cffi
