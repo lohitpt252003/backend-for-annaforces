@@ -1,12 +1,11 @@
-import sys
 import os
 import json
-import tempfile
-import shutil
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from services.github_services import get_file, get_folder_contents
-from judge_image_for_annaforces.good_one import execute_code
 
 
 SIZE = 50
@@ -72,6 +71,8 @@ def grade_submission(code, language, problem_id):
     """
     Grades a submission by running it against all test cases for a given problem.
     """
+
+    if language.lower() == 'cpp': language = 'c++'
     testcases = get_testcases(problem_id)
     
     if not testcases:
@@ -85,7 +86,28 @@ def grade_submission(code, language, problem_id):
         stdin = testcase.get('stdin', '')
         expected_stdout = testcase.get('stdout', '')
         
-        result = execute_code(language, code, testcase.get('stdin'))
+        url = os.getenv('JUDGE_API_SERVER_URL')
+        payload = {
+            "language": language,
+            "code": code,
+            "stdin": stdin,
+            "timelimit": "2",
+            "memorylimit": "1024"
+        }
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        try:
+            response = requests.post(url, data=json.dumps(payload), headers=headers)
+            response.raise_for_status()
+            result = response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error calling execution server: {e}")
+            result = {
+                "stdout": "", "stderr": "", "err": "Execution Server Error",
+                "timetaken": 0, "memorytaken": 0, "success": False
+            }
+        
         print(result)
 
         stdout = result.get('stdout', '')
