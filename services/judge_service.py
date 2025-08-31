@@ -103,10 +103,7 @@ def grade_submission(code, language, problem_id):
             result = response.json()
         except requests.exceptions.RequestException as e:
             print(f"Error calling execution server: {e}")
-            result = {
-                "stdout": "", "stderr": "", "err": "Execution Server Error",
-                "timetaken": 0, "memorytaken": 0, "success": False
-            }
+            return {"overall_status": "error", "message": "Code execution server is not running. Please contact the admin."}
         
         print(result)
 

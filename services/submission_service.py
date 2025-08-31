@@ -47,6 +47,9 @@ def handle_new_submission(problem_id, user_id, language, code):
 
     # 3. Grade the submission
     judge_result = grade_submission(code, language, problem_id)
+    if judge_result.get("overall_status") == "error":
+        return {"error": judge_result.get("message", "An unknown error occurred during judging.")}
+
     submission_meta_data["status"] = judge_result["overall_status"]
     submission_meta_data["test_results"] = judge_result["test_results"]
 

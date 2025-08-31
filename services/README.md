@@ -30,11 +30,11 @@ This directory contains various service modules used in the `backend-for-annafor
   - **Dependencies**: `requests`, `json`, `os`, `base64`, `time`, `dotenv`.
 
 - `judge_service.py`:
-  - **Description**: Manages the automated judging process for code submissions. It retrieves test cases, executes submitted code, and determines the submission's verdict.
+  - **Description**: Manages the automated judging process for code submissions. It retrieves test cases from GitHub and sends the code to an external code execution server for judging. It then determines the submission's verdict based on the results from the execution server.
   - **Key Functions**:
     - `get_testcases(problem_id)`: Fetches input and output test cases for a given problem from GitHub.
-    - `grade_submission(code, language, problem_id)`: Executes the provided code against all test cases and returns detailed results, including status (e.g., accepted, wrong answer, time limit exceeded).
-  - **Dependencies**: `sys`, `os`, `json`, `tempfile`, `shutil`, `requests`, `services.github_services`, `judge_image_for_annaforces.good_one`.
+    - `grade_submission(code, language, problem_id)`: Sends the provided code to an external server for execution against all test cases and returns detailed results, including status (e.g., accepted, wrong answer, time limit exceeded). If the execution server is not running, it returns an error message.
+  - **Dependencies**: `os`, `json`, `requests`, `services.github_services`.
 
 - `problem_service.py`:
   - **Description**: Handles the creation and management of programming problems. It validates problem data and orchestrates the storage of problem-related files on GitHub.

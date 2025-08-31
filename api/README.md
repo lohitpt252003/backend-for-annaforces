@@ -92,6 +92,8 @@ This document provides an overview of the available APIs.
 Possible error messages:
 - `Problem not found`
 
+**Endpoint:** `/api/problems/<problem_id>/submit`
+
 **Method:** `POST`
 
 **Description:** Submits a solution for a specific problem. Requires a valid JWT in the Authorization header. When a solution is submitted, the `number_of_submissions` is automatically incremented for both the user and the problem. All related file changes in the `DATA` repository are committed with a message prefixed with `[AUTO]`.
@@ -105,10 +107,37 @@ Possible error messages:
 ```json
 {
   "language": "python",
-  "code": "print(\"hello world\")",
+  "code": "print("hello world")",
   "is_base64_encoded": false
 }
 ```
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "message": "Submission successful",
+  "status": "accepted",
+  "submission_id": "S12"
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+Possible error messages:
+- `Code execution server is not running. Please contact the admin.`
 
 **Endpoint:** `/api/problems/add`
 
@@ -145,35 +174,6 @@ Possible error messages:
 {
   "message": "Problem added successfully",
   "problem_id": "P5"
-}
-```
-
-**Error Response:**
-
-- **Code:** 400 Bad Request, 500 Internal Server Error
-- **Content:**
-
-```json
-{
-  "error": "<error message>"
-}
-```
-
-- `user_id` (string, required): The ID of the user submitting the solution.
-- `language` (string, required): The programming language of the solution. Supported languages are `c`, `c++`, and `python`.
-- `code` (string, required): The source code of the solution. Can be plain text or base64 encoded.
-- `is_base64_encoded` (boolean, optional): Set to `true` if the `code` is base64 encoded. Defaults to `false`.
-
-**Success Response:**
-
-- **Code:** 200 OK
-- **Content:**
-
-```json
-{
-  "message": "Submission successful",
-  "status": "accepted",
-  "submission_id": "S12"
 }
 ```
 
