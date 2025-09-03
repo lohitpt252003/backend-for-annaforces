@@ -6,7 +6,20 @@ from services.judge_service import grade_submission
 from config.github_config import GITHUB_PROBLEMS_BASE_PATH, GITHUB_USERS_BASE_PATH, GITHUB_SUBMISSIONS_BASE_PATH
 
 def handle_new_submission(problem_id, user_id, language, code):
-    # 1. Get global submission meta to generate a new submission ID
+    # 1. Grade the submission first
+    judge_result = grade_submission(code, language, problem_id)
+
+    # Check for judge service unavailability or other judging errors
+    if judge_result.get("overall_status") == "error":
+        if judge_result.get("message") == "Code execution server is not running. Please contact the admin.":
+            return {"error": "Code execution service is not available. Submission not saved. Contact the admin."}
+        else:
+            # Other judging errors (e.g., no test cases found)
+            return {"error": judge_result.get("message", "An unknown error occurred during judging.")}
+
+    # If judging is successful, proceed with submission ID generation and saving
+
+    # 2. Get global submission meta to generate a new submission ID
     global_submissions_meta_path = f"{GITHUB_SUBMISSIONS_BASE_PATH}/meta.json"
     global_submissions_meta_content, _, global_submissions_meta_error = get_file(global_submissions_meta_path)
 
@@ -20,7 +33,7 @@ def handle_new_submission(problem_id, user_id, language, code):
     except json.JSONDecodeError:
         return {"error": "Failed to decode global submissions meta.json"}
 
-    # 2. Create main submission files
+    # 3. Create main submission files
     submission_dir_path = f"{GITHUB_SUBMISSIONS_BASE_PATH}/{new_submission_id}"
     submission_meta_path = f"{submission_dir_path}/meta.json"
     code_file_extension = {"python": "py", "c++": "cpp", "c": "c"}.get(language.lower(), "txt")
@@ -31,8 +44,9 @@ def handle_new_submission(problem_id, user_id, language, code):
         "user_id": user_id,
         "problem_id": problem_id,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "status": "Pending",
-        "language": language
+        "status": judge_result["overall_status"], # Use status from judge_result
+        "language": language,
+        "test_results": judge_result["test_results"]
     }
 
     # Add submission meta.json to the main submissions folder
@@ -44,19 +58,6 @@ def handle_new_submission(problem_id, user_id, language, code):
     add_code_result = create_or_update_file(code_file_path, code, commit_message=f"[AUTO] Add {new_submission_id} code")
     if "error" in add_code_result:
         return {"error": f"Failed to add submission code: {add_code_result['message']}"}
-
-    # 3. Grade the submission
-    judge_result = grade_submission(code, language, problem_id)
-    if judge_result.get("overall_status") == "error":
-        return {"error": judge_result.get("message", "An unknown error occurred during judging.")}
-
-    submission_meta_data["status"] = judge_result["overall_status"]
-    submission_meta_data["test_results"] = judge_result["test_results"]
-
-    # Update main submission meta.json with judging results
-    update_submission_meta_result = create_or_update_file(submission_meta_path, json.dumps(submission_meta_data, indent=2), commit_message=f"[AUTO] Update {new_submission_id} meta with judging results")
-    if "error" in update_submission_meta_result:
-        return {"error": f"Failed to update submission meta with judging results: {update_submission_meta_result['message']}"}
 
     # 4. Update Problem Data
     # Add submission reference to problem

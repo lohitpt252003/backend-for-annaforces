@@ -6,13 +6,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from services.github_services import get_file, get_folder_contents
-
+from config.github_config import GITHUB_PROBLEMS_BASE_PATH
 
 SIZE = 50
 
 def get_testcases(problem_id):
     testcases = []
-    testcases_path = f'data/problems/{problem_id}/testcases'
+    testcases_path = f'{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/testcases'
     
     contents_response = get_folder_contents(testcases_path)
 
@@ -72,6 +72,23 @@ def grade_submission(code, language, problem_id):
     Grades a submission by running it against all test cases for a given problem.
     """
 
+    # Get problem metadata for time and memory limits
+    problem_meta_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/meta.json"
+    problem_meta_content, _, problem_meta_error = get_file(problem_meta_path)
+
+    if problem_meta_error:
+        return {"overall_status": "error", "message": f"Failed to get problem metadata: {problem_meta_error['message']}"}
+
+    try:
+        problem_meta_data = json.loads(problem_meta_content)
+        time_limit_ms = problem_meta_data.get("timeLimit", 2000) # Default to 2000ms
+        memory_limit_mb = problem_meta_data.get("memoryLimit", 256) # Default to 256MB
+    except json.JSONDecodeError:
+        return {"overall_status": "error", "message": "Failed to decode problem meta.json"}
+
+    # Convert time limit from milliseconds to seconds for the judge service
+    time_limit_s = max(1, time_limit_ms // 1000) # Ensure at least 1 second
+
     if language.lower() == 'cpp': language = 'c++'
     testcases = get_testcases(problem_id)
     
@@ -91,8 +108,8 @@ def grade_submission(code, language, problem_id):
             "language": language,
             "code": code,
             "stdin": stdin,
-            "timelimit": "2",
-            "memorylimit": "1024"
+            "timelimit": str(time_limit_s),
+            "memorylimit": str(memory_limit_mb)
         }
         headers = {
             'Content-Type': 'application/json'

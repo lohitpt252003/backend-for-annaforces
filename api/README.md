@@ -92,6 +92,48 @@ This document provides an overview of the available APIs.
 Possible error messages:
 - `Problem not found`
 
+**Endpoint:** `/api/problems/<problem_id>/solution`
+
+**Method:** `GET`
+
+**Description:** Retrieves the solution code and explanation for a specific problem. Requires a valid JWT in the Authorization header.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**URL Parameters:**
+
+- `problem_id`: The ID of the problem to retrieve solutions for.
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "python": "<python solution code>",
+  "cpp": "<cpp solution code>",
+  "c": "<c solution code>",
+  "markdown": "<solution explanation in markdown>"
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized (if token is missing or invalid), 404 Not Found (if solution files are not found for the problem_id), 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+Possible error messages:
+- `Solution files not found for this problem_id`
+
 **Endpoint:** `/api/problems/<problem_id>/submit`
 
 **Method:** `POST`
@@ -107,7 +149,7 @@ Possible error messages:
 ```json
 {
   "language": "python",
-  "code": "print("hello world")",
+  "code": "print(\"hello world\")",
   "is_base64_encoded": false
 }
 ```
@@ -137,7 +179,7 @@ Possible error messages:
 ```
 
 Possible error messages:
-- `Code execution server is not running. Please contact the admin.`
+- `Code execution service is not running. Please contact the admin.`
 
 **Endpoint:** `/api/problems/add`
 

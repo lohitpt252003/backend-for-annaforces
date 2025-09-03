@@ -108,6 +108,34 @@ def get_problem_by_id(current_user, problem_id):
 
     return jsonify(response_data), 200
 
+@problems_bp.route('/<problem_id>/solution', methods=['GET'])
+@token_required
+def get_problem_solution(current_user, problem_id):
+    solution_base_path = f"data/solutions/{problem_id}"
+    
+    solution_files = {
+        "python": f"{solution_base_path}/solution.py",
+        "cpp": f"{solution_base_path}/solution.cpp",
+        "c": f"{solution_base_path}/solution.c",
+        "markdown": f"{solution_base_path}/solution.md"
+    }
+
+    response_data = {}
+    for lang, path in solution_files.items():
+        content, _, error = get_file(path)
+        if error and "not found" in error["message"].lower():
+            response_data[lang] = None # File not found, set to None
+        elif error:
+            return jsonify({"error": f"Error fetching {lang} solution: {error['message']}"}), 500
+        else:
+            response_data[lang] = content
+
+    # Check if at least one solution file was found, otherwise problem_id might be invalid
+    if all(value is None for value in response_data.values()):
+        return jsonify({"error": "Solution files not found for this problem_id"}), 404
+
+    return jsonify(response_data), 200
+
 @problems_bp.route('/<problem_id>/submit', methods=['POST'])
 @token_required
 def submit_problem(current_user, problem_id):
