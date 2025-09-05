@@ -108,33 +108,48 @@ def get_user_by_id(user_id):
         return None, {"error": "Failed to decode meta.json"}
 
 def get_user_submissions(user_id):
-    meta_path = f"{GITHUB_SUBMISSIONS_BASE_PATH}/meta.json"
-    meta_content, _, meta_error = get_file(meta_path)
-
-    if meta_error:
-        return None, {"error": meta_error["message"]}
-
-    try:
-        meta_data = json.loads(meta_content)
-        num_submissions = meta_data.get("number_of_submissions")
-        if num_submissions is None:
-            return None, {"error": "number_of_submissions not found in meta.json"}
-    except json.JSONDecodeError:
-        return None, {"error": "Failed to decode meta.json"}
-
     submissions = []
-    for i in range(1, num_submissions + 1):
-        submission_file_path = f"{GITHUB_SUBMISSIONS_BASE_PATH}/S{i}/meta.json"
-        content, _, error = get_file(submission_file_path)
-        if error:
-            print(f"Error fetching {submission_file_path}: {error['message']}")
-            continue
-        try:
-            submission_data = json.loads(content)
-            if submission_data.get("user_id") == user_id:
+    
+    user_submissions_path = f"{GITHUB_USERS_BASE_PATH}/{user_id}/submissions"
+    
+    # Get all submission files for this specific user
+    response, error = get_folder_contents(user_submissions_path)
+    print(f"[DEBUG] get_folder_contents response for user submissions: {response}")
+    if not response.get("success"):
+        # If the folder doesn't exist, it means no submissions for this user
+        if "not found" in response.get("error", "").lower():
+            return [], None
+        return None, {"error": response.get("error", "Failed to get user submissions folder contents")}
+
+    submission_files = response.get("data")
+    print(f"[DEBUG] submission_files for user {user_id}: {submission_files}")
+
+    for item in submission_files:
+        if item['type'] == 'file' and item['name'].endswith('.json'):
+            submission_file_path = f"{user_submissions_path}/{item['name']}"
+            print(f"[DEBUG] submission_file_path: {submission_file_path}")
+            content, _, error = get_file(submission_file_path)
+            if error:
+                print(f"Error fetching {submission_file_path}: {error['message']}")
+                continue
+            try:
+                submission_data = json.loads(content)
+                print(f"[DEBUG] submission_data: {submission_data}")
                 submissions.append(submission_data)
-        except json.JSONDecodeError:
-            print(f"Error decoding JSON for {submission_file_path}")
-            continue
+            except json.JSONDecodeError:
+                print(f"Error decoding JSON for {submission_file_path}")
+                continue
 
     return submissions, None
+
+def get_solved_problems(user_id):
+    submissions, error = get_user_submissions(user_id)
+    if error:
+        return None, error
+
+    solved_problem_ids = set()
+    for submission in submissions:
+        if submission.get("status") and submission.get("status").lower() == "accepted":
+            solved_problem_ids.add(submission.get("problem_id"))
+
+    return list(solved_problem_ids), None

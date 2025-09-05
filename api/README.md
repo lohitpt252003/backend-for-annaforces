@@ -402,6 +402,45 @@ Possible error messages:
 ```
 
 
+**Endpoint:** `/api/users/<user_id>/solved`
+
+**Method:** `GET`
+
+**Description:** Retrieves a list of unique problems solved by a specific user (submissions with 'Accepted' status). Requires a valid JWT in the Authorization header. Any authenticated user can view any other user's solved problems. The `user_id` must have the prefix 'U' (e.g., 'U1') and consist only of alphanumeric characters.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**URL Parameters:**
+
+- `user_id`: The ID of the user to retrieve solved problems for.
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+[
+  "P1",
+  "P3",
+  "P5"
+]
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized (if token is missing or invalid), 400 Bad Request (if user_id format is invalid), 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+
 ## Auth API
 
 **Endpoint:** `/api/auth/login`

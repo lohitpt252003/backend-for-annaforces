@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 import json
 
-from services.user_service import get_user_by_id as get_user_by_id_service, get_user_submissions as get_user_submissions_service, update_user_profile as update_user_profile_service
+from services.user_service import get_user_by_id as get_user_by_id_service, get_user_submissions as get_user_submissions_service, update_user_profile as update_user_profile_service, get_solved_problems as get_solved_problems_service
 from services.github_services import get_file
 from config.github_config import GITHUB_USERS_BASE_PATH
 from api.problems_api import token_required
@@ -48,6 +48,23 @@ def get_user_submissions(current_user, user_id):
         return jsonify({"error": error["error"]}), 500
 
     return jsonify(submissions), 200
+
+@users_bp.route('/<user_id>/solved', methods=['GET'])
+@token_required
+def get_solved_problems(current_user, user_id):
+    # Validate user_id to prevent path traversal
+    if not user_id.startswith('U') or not user_id[1:].isdigit():
+        return jsonify({"error": "Invalid user ID format"}), 400
+
+    # Authorization: Any authenticated user can view any other user's solved problems
+    # No need to check current_user["user_id"] == user_id
+
+    solved_problems, error = get_solved_problems_service(user_id)
+
+    if error:
+        return jsonify({"error": error["error"]}), 500
+
+    return jsonify(solved_problems), 200
 
 @users_bp.route('/<user_id>/update-profile', methods=['PUT'])
 @token_required
