@@ -14,7 +14,7 @@ The `services/github_services.py` file provides a set of functions to interact w
 
 ### OTP and Email Service
 
-The `services/email_service.py` module handles OTP generation and sending via email using Flask-Mail. This is primarily used for user email verification during registration.
+The `services/email_service.py` module handles OTP generation and sending via email using Flask-Mail. This is primarily used for user email verification during registration, sending welcome emails, and sending user ID reminders or password reset links.
 
 #### Environment Variables
 
@@ -64,19 +64,32 @@ The `services/judge_service.py` is responsible for evaluating submitted code. It
 
 The `services/problem_service.py` is responsible for managing problems. It handles the creation of new problems, including validation of the problem data.
 
+## Security Enhancements
+
+Recent updates have focused on improving the security posture of the backend. Key enhancements include:
+
+-   **Input Validation:** Stricter validation has been implemented for user-provided IDs (`user_id`, `submission_id`) to prevent path traversal vulnerabilities. Only IDs conforming to expected formats (e.g., `U123`, `S456`) are accepted.
+-   **Language Whitelisting:** Code submission endpoints now enforce a whitelist for programming languages (`python`, `c`, `c++`) to ensure only supported and safe languages are processed by the judge service.
+
+-   **Email Enumeration Prevention:** The `/api/auth/forgot-userid` endpoint now returns a generic success message, regardless of whether the email exists, to prevent attackers from enumerating valid user email addresses.
+-   **Import Fixes:** Resolved import issues for email service functions (`send_password_reset_email`, `send_password_changed_confirmation_email`) ensuring proper functionality of password reset and confirmation emails.
+
+These measures contribute to a more robust and secure application.
+
 ## API Endpoints
 
 ### Auth API
 
-The `/api/auth/login` endpoint handles user authentication. It expects a `user_id` and `password` in the request body. Upon successful authentication, it returns a JWT token. If the user is not registered, a specific error message is returned.
+## API Endpoints
+
+### Auth API
+
+The `/api/auth/login` endpoint handles user authentication. It expects a `user_id` and `password` in the request body. Upon successful authentication, it returns a JWT token. If the user is not found, a specific error message is returned.
 
 **Example to get a token:**
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d "{\"user_id\": \"U1\", \"password\": \"1234\"}" https://backend-for-annaforces.onrender.com/api/auth/login
-```
-
-"Content-Type: application/json" -d "{\"user_id\": \"U1\", \"password\": \"1234\"}" https://backend-for-annaforces.onrender.com/api/auth/login
+curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password": "1234"}" https://backend-for-annaforces.onrender.com/api/auth/login
 ```
 
 ### Google Sign-In
@@ -121,3 +134,198 @@ curl -X POST -H "Content-Type: application/json" -d "{\"user_id\": \"U1\", \"pas
 }
 ```
 
+
+### Signup and OTP Verification
+
+**Endpoint:** `/api/auth/signup`
+
+**Method:** `POST`
+
+**Description:** Initiates the user registration process. It sends an OTP to the provided email address. The user is only created in the system after successful OTP verification.
+
+**Request Body:**
+
+```json
+{
+  "username": "new_username",
+  "password": "secure_password",
+  "name": "New User",
+  "email": "user@example.com"
+}
+```
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "message": "OTP has been sent to your email. Please verify to complete registration."
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request, 409 Conflict, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+**Endpoint:** `/api/auth/verify-otp`
+
+**Method:** `POST`
+
+**Description:** Verifies the OTP sent during signup. Upon successful verification, the user account is created, and a welcome email is sent.
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com",
+  "otp": "123456"
+}
+```
+
+**Success Response:**
+
+- **Code:** 201 Created
+- **Content:**
+
+```json
+{
+  "message": "Email verified and user registered successfully!",
+  "user_id": "U3"
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### Forgot User ID
+
+**Endpoint:** `/api/auth/forgot-userid`
+
+**Method:** `POST`
+
+**Description:** Sends an email to the user containing their User ID and username if the provided email exists in the system. Returns a generic message to prevent email enumeration.
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "message": "If a user with that email exists, a reminder has been sent."
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### Password Reset
+
+**Endpoint:** `/api/auth/request-password-reset`
+
+**Method:** `POST`
+
+**Description:** Initiates the password reset process. Sends a password reset link to the user's email if the provided email exists.
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "message": "If a user with that email exists, a password reset link has been sent."
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+**Endpoint:** `/api/auth/reset-password/<token>`
+
+**Method:** `POST`
+
+**Description:** Resets the user's password using a valid reset token. The token is single-use and expires after 15 minutes.
+
+**URL Parameters:**
+
+- `token`: The password reset token received via email.
+
+**Request Body:**
+
+```json
+{
+  "new_password": "new_secure_password"
+}
+```
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "message": "Password has been reset successfully."
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```

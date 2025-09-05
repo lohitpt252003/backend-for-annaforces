@@ -11,6 +11,10 @@ submissions_bp = Blueprint("submissions", __name__)
 @submissions_bp.route('/<submission_id>', methods=['GET'])
 @token_required
 def get_submission_by_id(current_user, submission_id):
+    # Validate submission_id to prevent path traversal
+    if not submission_id.startswith('S') or not submission_id[1:].isdigit():
+        return jsonify({"error": "Invalid submission ID format"}), 400
+
     submission_meta_path = f"{GITHUB_SUBMISSIONS_BASE_PATH}/{submission_id}/meta.json"
     
     meta_content, _, meta_error = get_file(submission_meta_path)

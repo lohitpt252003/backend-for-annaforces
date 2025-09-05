@@ -69,3 +69,49 @@ def send_userid_reminder_email(mail, recipient_email, name, username, user_id):
     except Exception as e:
         return False, str(e)
 
+def send_password_reset_email(mail, recipient_email, name, otp):
+    msg = Message("Annaforces Password Reset OTP",
+                    recipients=[recipient_email])
+    msg.html = f"""
+    <html>
+        <body>
+            <h2>Password Reset Request</h2>
+            <p>Hello {name},</p>
+            <p>You have requested to reset your password for your Annaforces account.</p>
+            <p>Your One-Time Password (OTP) for password reset is: <b>{otp}</b></p>
+            <p>This OTP is valid for 5 minutes. Do not share it with anyone.</p>
+            <p>If you did not request a password reset, please ignore this email.</p>
+            <br>
+            <p>Best regards,</p>
+            <p>The Annaforces Team</p>
+        </body>
+    </html>
+    """
+    try:
+        mail.send(msg)
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+def send_password_changed_confirmation_email(mail, recipient_email, name):
+    msg = Message("Annaforces Password Changed Confirmation",
+                    recipients=[recipient_email])
+    msg.html = f"""
+    <html>
+        <body>
+            <h2>Password Changed Successfully</h2>
+            <p>Hello {name},</p>
+            <p>Your password for your Annaforces account has been successfully changed.</p>
+            <p>If you did not make this change, please contact support immediately.</p>
+            <br>
+            <p>Best regards,</p>
+            <p>The Annaforces Team</p>
+        </body>
+    </html>
+    """
+    try:
+        mail.send(msg)
+        return True, None
+    except Exception as e:
+        return False, str(e)
+

@@ -154,6 +154,10 @@ def submit_problem(current_user, problem_id):
     if not all([language, code]):
         return jsonify({"error": "Missing language or code in request body"}), 400
 
+    supported_languages = ["python", "c", "cpp"]
+    if language.lower() not in supported_languages:
+        return jsonify({"error": f"Unsupported language: {language}. Supported languages are {', '.join(supported_languages)}"}), 400
+
     result = handle_new_submission(problem_id, user_id, language, code)
 
     if "error" in result:

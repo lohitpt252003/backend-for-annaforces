@@ -4,8 +4,9 @@ from services.github_services import get_folder_contents, get_file, create_or_up
 from services.firebase_service import verify_user, get_or_create_google_user, get_user, add_user, verify_otp as firebase_verify_otp
 from config.github_config import GITHUB_USERS_BASE_PATH
 from utils.jwt_token import generate_token
-from services.email_service import generate_otp, send_otp_email, send_welcome_email, send_userid_reminder_email
+from services.email_service import generate_otp, send_otp_email, send_welcome_email, send_userid_reminder_email, send_password_reset_email, send_password_changed_confirmation_email
 from datetime import datetime, timedelta
+import secrets
 from extensions import mail # Import the mail instance
 
 auth_bp = Blueprint('auth', __name__)
@@ -251,3 +252,128 @@ def verify_otp_route():
     del unverified_users[email]
 
     return jsonify({"message": "Email verified and user registered successfully!", "user_id": user_id}), 201
+
+@auth_bp.route('/forgot-userid', methods=['POST'])
+def forgot_userid():
+    data = request.get_json()
+    email = data.get('email')
+
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
+    try:
+        users_folders, error = get_folder_contents(GITHUB_USERS_BASE_PATH)
+        if error:
+            return jsonify({"error": "Could not retrieve users list."}), 500
+
+        user_found = False
+        for item in users_folders:
+            if item['type'] == 'dir':
+                meta_path = f"{GITHUB_USERS_BASE_PATH}/{item['name']}/meta.json"
+                meta_content, _, meta_error = get_file(meta_path)
+                if not meta_error and meta_content:
+                    meta_data = json.loads(meta_content)
+                    if meta_data.get('email') == email:
+                        user_found = True
+                        user_id = meta_data.get('id')
+                        username = meta_data.get('username')
+                        name = meta_data.get('name')
+                        send_userid_reminder_email(mail, email, name, username, user_id)
+                        break
+        
+        if user_found:
+            return jsonify({"message": "If a user with that email exists, a reminder has been sent."}), 200
+        else:
+            return jsonify({"message": "If a user with that email exists, a reminder has been sent."}), 200
+
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+password_resets = {}
+
+password_reset_otps = {}
+
+@auth_bp.route('/request-password-reset', methods=['POST'])
+def request_password_reset():
+    data = request.get_json()
+    email = data.get('email')
+
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
+    try:
+        users_folders, error = get_folder_contents(GITHUB_USERS_BASE_PATH)
+        if error:
+            return jsonify({"error": "Could not retrieve users list."}), 500
+
+        user_found = False
+        for item in users_folders:
+            if item['type'] == 'dir':
+                meta_path = f"{GITHUB_USERS_BASE_PATH}/{item['name']}/meta.json"
+                meta_content, _, meta_error = get_file(meta_path)
+                if not meta_error and meta_content:
+                    meta_data = json.loads(meta_content)
+                    if meta_data.get('email') == email:
+                        user_found = True
+                        user_id = meta_data.get('id')
+                        name = meta_data.get('name')
+
+                        otp = generate_otp()
+                        otp_expiry = datetime.now() + timedelta(minutes=5)
+
+                        password_reset_otps[email] = {
+                            'user_id': user_id,
+                            'name': name,
+                            'otp_secret': otp,
+                            'otp_expiry': otp_expiry,
+                            'otp_attempts': 0
+                        }
+
+                        send_password_reset_email(mail, email, name, otp)
+                        break
+        
+        # Always return a generic message to prevent email enumeration
+        return jsonify({"message": "If a user with that email exists, an OTP has been sent."}), 200
+
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+@auth_bp.route('/verify-password-reset-otp', methods=['POST'])
+def verify_password_reset_otp():
+    data = request.get_json()
+    email = data.get('email')
+    otp = data.get('otp')
+    new_password = data.get('new_password')
+
+    if not all([email, otp, new_password]):
+        return jsonify({"error": "Email, OTP, and new password are required"}), 400
+
+    reset_data = password_reset_otps.get(email)
+
+    if not reset_data:
+        return jsonify({"error": "Invalid email or password reset session expired."}), 400
+
+    if datetime.now() > reset_data['otp_expiry']:
+        del password_reset_otps[email] # Clean up expired OTP
+        return jsonify({"error": "OTP expired."}), 400
+
+    if reset_data.get('otp_attempts', 0) >= 3:
+        return jsonify({"error": "Too many incorrect OTP attempts. Please try requesting a new OTP."}), 400
+
+    if reset_data['otp_secret'] != otp:
+        reset_data['otp_attempts'] = reset_data.get('otp_attempts', 0) + 1
+        return jsonify({"error": "Invalid OTP."}), 400
+
+    user_id = reset_data['user_id']
+    name = reset_data['name']
+
+    # Update password in Firebase
+    success, error_message = add_user(user_id, password=new_password, method='password', is_verified=True) # Re-add with new password
+    if error_message:
+        return jsonify({"error": error_message}), 500
+
+    send_password_changed_confirmation_email(mail, email, name)
+
+    del password_reset_otps[email] # Invalidate OTP after use
+
+    return jsonify({"message": "Password has been reset successfully."}), 200

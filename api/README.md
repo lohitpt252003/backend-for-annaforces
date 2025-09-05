@@ -138,7 +138,7 @@ Possible error messages:
 
 **Method:** `POST`
 
-**Description:** Submits a solution for a specific problem. Requires a valid JWT in the Authorization header. When a solution is submitted, the `number_of_submissions` is automatically incremented for both the user and the problem. All related file changes in the `DATA` repository are committed with a message prefixed with `[AUTO]`.
+**Description:** Submits a solution for a specific problem. Requires a valid JWT in the Authorization header. Only `c`, `c++`, and `python` languages are supported. When a solution is submitted, the `number_of_submissions` is automatically incremented for both the user and the problem. All related file changes in the `DATA` repository are committed with a message prefixed with `[AUTO]`.
 
 **Authorization Header:**
 
@@ -180,6 +180,8 @@ Possible error messages:
 
 Possible error messages:
 - `Code execution service is not running. Please contact the admin.`
+- `Unsupported language: <language>. Supported languages are c, c++, python.`
+
 
 **Endpoint:** `/api/problems/add`
 
@@ -323,7 +325,7 @@ Possible error messages:
 
 **Method:** `GET`
 
-**Description:** Retrieves a specific user by their ID. Requires a valid JWT in the Authorization header. The `user_id` in the URL must match the `user_id` in the provided token. The `user_id` must have the prefix 'U' (e.g., 'U1').
+**Description:** Retrieves a specific user by their ID. Requires a valid JWT in the Authorization header. The `user_id` in the URL must match the `user_id` in the provided token. The `user_id` must have the prefix 'U' (e.g., 'U1') and consist only of alphanumeric characters.
 
 **Authorization Header:**
 
@@ -347,7 +349,7 @@ Possible error messages:
 
 **Error Response:**
 
-- **Code:** 401 Unauthorized (if token is missing or invalid), 403 Forbidden (if user_id in token does not match user_id in URL), 500 Internal Server Error
+- **Code:** 401 Unauthorized (if token is missing or invalid), 403 Forbidden (if user_id in token does not match user_id in URL), 400 Bad Request (if user_id format is invalid), 500 Internal Server Error
 - **Content:**
 
 ```json
@@ -360,7 +362,7 @@ Possible error messages:
 
 **Method:** `GET`
 
-**Description:** Retrieves all submissions for a specific user. Requires a valid JWT in the Authorization header. Any authenticated user can view any other user's submissions.
+**Description:** Retrieves all submissions for a specific user. Requires a valid JWT in the Authorization header. Any authenticated user can view any other user's submissions. The `user_id` must have the prefix 'U' (e.g., 'U1') and consist only of alphanumeric characters.
 
 **Authorization Header:**
 
@@ -390,7 +392,7 @@ Possible error messages:
 
 **Error Response:**
 
-- **Code:** 401 Unauthorized (if token is missing or invalid), 500 Internal Server Error
+- **Code:** 401 Unauthorized (if token is missing or invalid), 400 Bad Request (if user_id format is invalid), 500 Internal Server Error
 - **Content:**
 
 ```json
@@ -406,7 +408,7 @@ Possible error messages:
 
 **Method:** `POST`
 
-**Description:** Authenticates a user with provided `user_id` and `password`. If the user is not registered, or if the account is not verified (for password-based signups), specific error messages are returned.
+**Description:** Authenticates a user with provided `user_id` and `password`. If the user is not found, a specific error message is returned.
 
 **Request Body:**
 
@@ -434,7 +436,7 @@ Possible error messages:
 
 **Error Response:**
 
-- **Code:** 400 Bad Request (if `user_id` or `password` is missing), 401 Unauthorized (if credentials are invalid or user not registered), 403 Forbidden (if account is not verified), 500 Internal Server Error (if `meta.json` is invalid)
+- **Code:** 400 Bad Request (if `user_id` or `password` is missing), 401 Unauthorized (if credentials are invalid), 500 Internal Server Error
 - **Content:**
 
 ```json
@@ -446,24 +448,104 @@ Possible error messages:
 Possible error messages:
 - `User ID and password are required`
 - `Invalid credentials`
-- `You are not registered, contact admin`
-- `Account not verified. Please verify your email with OTP.`
+- `User not found. Please sign up or contact the admin.`
 
-**Endpoint:** `/api/auth/signup`
+**Endpoint:** `/api/auth/google-signin`
 
 **Method:** `POST`
 
-**Description:** Registers a new user. An OTP will be sent to the provided email for verification. The user's account will be unverified until the OTP is successfully verified.
+**Description:** Handles Google Sign-In by verifying the Google ID token received from the frontend. It uses Firebase Authentication to validate the token and either retrieves an existing user or creates a new user entry in Firestore based on the Google profile information. Upon successful verification and user handling, it generates and returns a JWT for the user.
 
 **Request Body:**
 
 ```json
 {
-  "user_id": "new_user_id",
+  "id_token": "<Google ID Token>"
+}
+```
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "message": "Google sign-in successful",
+  "user_id": "<Firebase UID>",
+  "username": "<Google Email>",
+  "name": "<Google Display Name>",
+  "token": "<JWT>"
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request (if `id_token` is missing), 401 Unauthorized (if `id_token` is invalid or verification fails), 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+**Endpoint:** `/api/auth/signup`
+
+**Method:** `POST`
+
+**Description:** Initiates the user registration process. It sends an OTP to the provided email address. The user is only created in the system after successful OTP verification.
+
+**Request Body:**
+
+```json
+{
   "username": "new_username",
   "password": "new_password",
   "name": "New User Name",
   "email": "user@example.com"
+}
+```
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "message": "OTP has been sent to your email. Please verify to complete registration."
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request (missing fields), 409 Conflict (username already exists), 500 Internal Server Error (email sending failure)
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+Possible error messages:
+- `All fields (username, password, name, email) are required`
+- `Username already exists`
+- `Failed to send OTP email: <error_details>`
+
+**Endpoint:** `/api/auth/verify-otp`
+
+**Method:** `POST`
+
+**Description:** Verifies the OTP sent during signup. Upon successful verification, the user account is created, and a welcome email is sent.
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com",
+  "otp": "123456"
 }
 ```
 
@@ -474,14 +556,14 @@ Possible error messages:
 
 ```json
 {
-  "message": "User registered successfully. Please check your email for OTP verification.",
-  "user_id": "new_user_id"
+  "message": "Email verified and user registered successfully!",
+  "user_id": "U3"
 }
 ```
 
 **Error Response:**
 
-- **Code:** 400 Bad Request (missing fields), 409 Conflict (user ID already exists), 500 Internal Server Error (email sending failure, metadata file creation failure)
+- **Code:** 400 Bad Request (missing fields, invalid OTP, OTP expired, too many attempts, email not found)
 - **Content:**
 
 ```json
@@ -491,23 +573,23 @@ Possible error messages:
 ```
 
 Possible error messages:
-- `All fields (user_id, username, password, name, email) are required`
-- `User ID already exists`
-- `Failed to send OTP email: <error_details>`
-- `Failed to create user metadata file: <error_details>`
+- `Email and OTP are required`
+- `Invalid email or registration session expired.`
+- `OTP expired.`
+- `Too many incorrect OTP attempts. Please try signing up again.`
+- `Invalid OTP.`
 
-**Endpoint:** `/api/auth/verify-otp`
+**Endpoint:** `/api/auth/forgot-userid`
 
 **Method:** `POST`
 
-**Description:** Verifies the OTP sent to the user's email during registration. Upon successful verification, the user's account will be marked as verified.
+**Description:** Sends an email to the user containing their User ID and username if the provided email exists in the system.
 
 **Request Body:**
 
 ```json
 {
-  "user_id": "user_to_verify",
-  "otp": "123456"
+  "email": "user@example.com"
 }
 ```
 
@@ -518,13 +600,13 @@ Possible error messages:
 
 ```json
 {
-  "message": "Email verified successfully!"
+  "message": "If a user with that email exists, a reminder has been sent."
 }
 ```
 
 **Error Response:**
 
-- **Code:** 400 Bad Request (missing fields, invalid OTP, OTP expired, user not found)
+- **Code:** 400 Bad Request, 404 Not Found, 500 Internal Server Error
 - **Content:**
 
 ```json
@@ -534,26 +616,65 @@ Possible error messages:
 ```
 
 Possible error messages:
-- `User ID and OTP are required`
-- `Invalid OTP.`
-- `OTP expired.`
-- `User not found.`
+- `Email is required`
+- `Email not found in our records.`
 
-## Submissions API
+**Endpoint:** `/api/auth/request-password-reset`
 
-**Endpoint:** `/api/submissions/<submission_id>`
+**Method:** `POST`
 
-**Method:** `GET`
+**Description:** Initiates the password reset process. Sends a password reset link to the user's email if the provided email exists.
 
-**Description:** Retrieves a specific submission by its ID, including the submitted code and language. Requires a valid JWT in the Authorization header.
+**Request Body:**
 
-**Authorization Header:**
+```json
+{
+  "email": "user@example.com"
+}
+```
 
-`Authorization: Bearer <your_jwt_token>`
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "message": "If a user with that email exists, a password reset link has been sent."
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+Possible error messages:
+- `Email is required`
+
+**Endpoint:** `/api/auth/reset-password/<token>`
+
+**Method:** `POST`
+
+**Description:** Resets the user's password using a valid reset token. The token is single-use and expires after 15 minutes.
 
 **URL Parameters:**
 
-- `submission_id`: The ID of the submission to retrieve.
+- `token`: The password reset token received via email.
+
+**Request Body:**
+
+```json
+{
+  "new_password": "new_secure_password"
+}
+```
 
 **Success Response:**
 
@@ -562,39 +683,13 @@ Possible error messages:
 
 ```json
 {
-  "code": "#include <stdio.h>\nint main() { int a, b; scanf(\" %d %d \", &a, &b); printf(\" %d \", a + b); return 0; }",
-  "language": "c",
-  "problem_id": "P1",
-  "status": "accepted",
-  "submission_id": "S1",
-  "test_results": [
-    {
-      "actual_output": " 2 ",
-      "execution_time": 0.0,
-      "expected_output": "2",
-      "memory_usage": 1.47265625,
-      "message": "Test case passed",
-      "status": "passed",
-      "test_case_number": 1
-    },
-    {
-      "actual_output": " 4 ",
-      "execution_time": 0.0,
-      "expected_output": "4",
-      "memory_usage": 1.58984375,
-      "message": "Test case passed",
-      "status": "passed",
-      "test_case_number": 2
-    }
-  ],
-  "timestamp": "2025-08-29T06:36:40Z",
-  "user_id": "U1"
+  "message": "Password has been reset successfully."
 }
 ```
 
 **Error Response:**
 
-- **Code:** 401 Unauthorized (if token is missing or invalid), 404 Not Found (if submission not found), 500 Internal Server Error
+- **Code:** 400 Bad Request, 500 Internal Server Error
 - **Content:**
 
 ```json
@@ -604,4 +699,5 @@ Possible error messages:
 ```
 
 Possible error messages:
-- `Submission not found`
+- `New password is required`
+- `Invalid or expired reset token.`
