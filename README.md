@@ -14,7 +14,7 @@ The `services/github_services.py` file provides a set of functions to interact w
 
 ### OTP and Email Service
 
-The `services/email_service.py` module handles OTP generation and sending via email using Flask-Mail. This is primarily used for user email verification during registration, sending welcome emails, and sending user ID reminders or password reset links.
+The `services/email_service.py` module handles OTP generation and sending via email using Flask-Mail. This is primarily used for user email verification during registration, sending welcome emails, user ID reminders, and password reset OTPs.
 
 #### Environment Variables
 
@@ -73,6 +73,8 @@ Recent updates have focused on improving the security posture of the backend. Ke
 
 -   **Email Enumeration Prevention:** The `/api/auth/forgot-userid` endpoint now returns a generic success message, regardless of whether the email exists, to prevent attackers from enumerating valid user email addresses.
 -   **Import Fixes:** Resolved import issues for email service functions (`send_password_reset_email`, `send_password_changed_confirmation_email`) ensuring proper functionality of password reset and confirmation emails.
+
+-   **Authorization Policy Update:** The `/api/users/<user_id>` endpoint now allows any authenticated user to view the profile details of any other user, aligning with the updated requirement for public profile viewing.
 
 These measures contribute to a more robust and secure application.
 
@@ -258,7 +260,7 @@ curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password
 
 **Method:** `POST`
 
-**Description:** Initiates the password reset process. Sends a password reset link to the user's email if the provided email exists.
+**Description:** Initiates the password reset process by sending a One-Time Password (OTP) to the user's email if the provided email exists.
 
 **Request Body:**
 
@@ -275,7 +277,7 @@ curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password
 
 ```json
 {
-  "message": "If a user with that email exists, a password reset link has been sent."
+  "message": "If a user with that email exists, an OTP has been sent."
 }
 ```
 
@@ -290,20 +292,18 @@ curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password
 }
 ```
 
-**Endpoint:** `/api/auth/reset-password/<token>`
+**Endpoint:** `/api/auth/verify-password-reset-otp`
 
 **Method:** `POST`
 
-**Description:** Resets the user's password using a valid reset token. The token is single-use and expires after 15 minutes.
-
-**URL Parameters:**
-
-- `token`: The password reset token received via email.
+**Description:** Verifies the OTP and allows the user to set a new password. The OTP is single-use and expires after 5 minutes.
 
 **Request Body:**
 
 ```json
 {
+  "email": "user@example.com",
+  "otp": "123456",
   "new_password": "new_secure_password"
 }
 ```

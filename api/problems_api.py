@@ -176,20 +176,29 @@ def submit_problem(current_user, problem_id):
 def get_problem_submissions(current_user, problem_id):
     submissions_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/submissions"
     
-    folder_contents_response = get_folder_contents(submissions_path)
+    response, error = get_folder_contents(submissions_path)
 
-    if not folder_contents_response.get("success"):
-        return jsonify({"error": folder_contents_response.get("error", "Failed to get submissions")}), 500
+    if not response.get("success"):
+        return jsonify({"error": response.get("error", "Failed to get submissions")}), 500
 
     submissions = []
-    for item in folder_contents_response["data"]:
+    for item in response["data"]:
         if item['type'] == 'file' and item['name'].endswith(".json"):
             try:
-                file_content_resp = requests.get(item['download_url'])
-                if file_content_resp.status_code == 200:
-                    submissions.append(json.loads(file_content_resp.text))
+                # For local files, download_url will be a local path (file:///...)
+                # For GitHub files, it will be a raw URL
+                if item['download_url'].startswith('file:///'):
+                    # Read local file directly
+                    local_file_path = item['download_url'][len('file:///'):]
+                    with open(local_file_path, 'r', encoding='utf-8') as f:
+                        submissions.append(json.loads(f.read()))
                 else:
-                    print(f"Error fetching content for {item['path']}: HTTP {file_content_resp.status_code}")
+                    # Fetch from URL for GitHub files
+                    file_content_resp = requests.get(item['download_url'])
+                    if file_content_resp.status_code == 200:
+                        submissions.append(json.loads(file_content_resp.text))
+                    else:
+                        print(f"Error fetching content for {item['path']}: HTTP {file_content_resp.status_code}")
             except json.JSONDecodeError:
                 print(f"Error decoding JSON for {item['path']}")
                 continue

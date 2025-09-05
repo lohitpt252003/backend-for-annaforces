@@ -29,9 +29,6 @@ def get_user_by_id(current_user, user_id):
     if not user_id.startswith('U') or not user_id[1:].isdigit():
         return jsonify({"error": "Invalid user ID format"}), 400
 
-    if current_user["user_id"] != user_id:
-        return jsonify({"error": "Unauthorized access"}), 403
-
     user, error = get_user_by_id_service(user_id)
 
     if error:

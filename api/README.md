@@ -325,7 +325,7 @@ Possible error messages:
 
 **Method:** `GET`
 
-**Description:** Retrieves a specific user by their ID. Requires a valid JWT in the Authorization header. The `user_id` in the URL must match the `user_id` in the provided token. The `user_id` must have the prefix 'U' (e.g., 'U1') and consist only of alphanumeric characters.
+**Description:** Retrieves a specific user by their ID. Requires a valid JWT in the Authorization header. Any authenticated user can view any other user's profile details. The `user_id` must have the prefix 'U' (e.g., 'U1') and consist only of alphanumeric characters.
 
 **Authorization Header:**
 
@@ -349,7 +349,7 @@ Possible error messages:
 
 **Error Response:**
 
-- **Code:** 401 Unauthorized (if token is missing or invalid), 403 Forbidden (if user_id in token does not match user_id in URL), 400 Bad Request (if user_id format is invalid), 500 Internal Server Error
+- **Code:** 401 Unauthorized (if token is missing or invalid), 400 Bad Request (if user_id format is invalid), 500 Internal Server Error
 - **Content:**
 
 ```json
