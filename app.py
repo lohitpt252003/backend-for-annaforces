@@ -2,17 +2,30 @@ from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
-
+from extensions import mail
+from flask_mail import Message
 
 from api.problems_api import problems_bp
 from api.users_api import users_bp
 from api.auth_api import auth_bp
 from api.submissions_api import submissions_bp
 
-
 def create_app():
     app = Flask(__name__)
     CORS(app)
+
+    # Load environment variables
+    load_dotenv()
+
+    # Flask-Mail configuration
+    app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
+    app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587)) # Default to 587
+    app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+
+    mail.init_app(app)
 
     app.register_blueprint(problems_bp, url_prefix='/api/problems')
     app.register_blueprint(users_bp, url_prefix='/api/users')
@@ -21,7 +34,7 @@ def create_app():
 
     @app.route("/")
     def root():
-        return {"message": "Backend is running 🎯"}
+        return {"message": "Backend is running!"}
     
     return app
 

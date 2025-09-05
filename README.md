@@ -12,6 +12,10 @@ The backend is deployed at: `https://backend-for-annaforces.onrender.com/`
 
 The `services/github_services.py` file provides a set of functions to interact with a GitHub repository. This service is used to manage the data stored in the `DATA` repository.
 
+### OTP and Email Service
+
+The `services/email_service.py` module handles OTP generation and sending via email using Flask-Mail. This is primarily used for user email verification during registration.
+
 #### Environment Variables
 
 To use the services, you need to set the following environment variables in a `.env` file in the root of the `backend-for-annaforces` directory:
@@ -20,6 +24,12 @@ To use the services, you need to set the following environment variables in a `.
 - `GITHUB_REPO`: The name of the GitHub repository where the data is stored.
 - `GITHUB_OWNER`: The owner of the GitHub repository.
 - `JUDGE_API_SERVER_URL`: The URL of the code execution server.
+- `MAIL_SERVER`: SMTP server address (e.g., `smtp.gmail.com`).
+- `MAIL_PORT`: SMTP server port (e.g., `587`).
+- `MAIL_USE_TLS`: Set to `True` for TLS encryption.
+- `MAIL_USERNAME`: The email address used to send OTPs.
+- `MAIL_PASSWORD`: The app password for the sending email address.
+- `MAIL_DEFAULT_SENDER`: The default sender email address.
 
 ### Firebase Service
 
@@ -67,5 +77,47 @@ curl -X POST -H "Content-Type: application/json" -d "{\"user_id\": \"U1\", \"pas
 ```
 
 "Content-Type: application/json" -d "{\"user_id\": \"U1\", \"password\": \"1234\"}" https://backend-for-annaforces.onrender.com/api/auth/login
+```
+
+### Google Sign-In
+
+**Endpoint:** `/api/auth/google-signin`
+
+**Method:** `POST`
+
+**Description:** Handles Google Sign-In by verifying the Google ID token received from the frontend. It uses Firebase Authentication to validate the token and either retrieves an existing user or creates a new user entry in Firestore based on the Google profile information. Upon successful verification and user handling, it generates and returns a JWT for the user.
+
+**Request Body:**
+
+```json
+{
+  "id_token": "<Google ID Token>"
+}
+```
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "message": "Google sign-in successful",
+  "user_id": "<Firebase UID>",
+  "username": "<Google Email>",
+  "name": "<Google Display Name>",
+  "token": "<JWT>"
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request (if `id_token` is missing), 401 Unauthorized (if `id_token` is invalid or verification fails), 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
 ```
 

@@ -406,7 +406,7 @@ Possible error messages:
 
 **Method:** `POST`
 
-**Description:** Authenticates a user with provided `user_id` and `password`.
+**Description:** Authenticates a user with provided `user_id` and `password`. If the user is not registered, or if the account is not verified (for password-based signups), specific error messages are returned.
 
 **Request Body:**
 
@@ -434,7 +434,7 @@ Possible error messages:
 
 **Error Response:**
 
-- **Code:** 400 Bad Request (if `user_id` or `password` is missing), 401 Unauthorized (if credentials are invalid or user not registered), 500 Internal Server Error (if `meta.json` is invalid)
+- **Code:** 400 Bad Request (if `user_id` or `password` is missing), 401 Unauthorized (if credentials are invalid or user not registered), 403 Forbidden (if account is not verified), 500 Internal Server Error (if `meta.json` is invalid)
 - **Content:**
 
 ```json
@@ -447,6 +447,97 @@ Possible error messages:
 - `User ID and password are required`
 - `Invalid credentials`
 - `You are not registered, contact admin`
+- `Account not verified. Please verify your email with OTP.`
+
+**Endpoint:** `/api/auth/signup`
+
+**Method:** `POST`
+
+**Description:** Registers a new user. An OTP will be sent to the provided email for verification. The user's account will be unverified until the OTP is successfully verified.
+
+**Request Body:**
+
+```json
+{
+  "user_id": "new_user_id",
+  "username": "new_username",
+  "password": "new_password",
+  "name": "New User Name",
+  "email": "user@example.com"
+}
+```
+
+**Success Response:**
+
+- **Code:** 201 Created
+- **Content:**
+
+```json
+{
+  "message": "User registered successfully. Please check your email for OTP verification.",
+  "user_id": "new_user_id"
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request (missing fields), 409 Conflict (user ID already exists), 500 Internal Server Error (email sending failure, metadata file creation failure)
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+Possible error messages:
+- `All fields (user_id, username, password, name, email) are required`
+- `User ID already exists`
+- `Failed to send OTP email: <error_details>`
+- `Failed to create user metadata file: <error_details>`
+
+**Endpoint:** `/api/auth/verify-otp`
+
+**Method:** `POST`
+
+**Description:** Verifies the OTP sent to the user's email during registration. Upon successful verification, the user's account will be marked as verified.
+
+**Request Body:**
+
+```json
+{
+  "user_id": "user_to_verify",
+  "otp": "123456"
+}
+```
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "message": "Email verified successfully!"
+}
+```
+
+**Error Response:**
+
+- **Code:** 400 Bad Request (missing fields, invalid OTP, OTP expired, user not found)
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+Possible error messages:
+- `User ID and OTP are required`
+- `Invalid OTP.`
+- `OTP expired.`
+- `User not found.`
 
 ## Submissions API
 

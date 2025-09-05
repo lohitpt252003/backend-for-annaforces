@@ -158,7 +158,7 @@ def grade_submission(code, language, problem_id):
             "message": message,
             "execution_time": timetaken,
             "memory_usage": memorytaken,
-            "actual_output": stdout,
+            "actual_output": stdout.strip(),
             "expected_output": expected_stdout
         })
 

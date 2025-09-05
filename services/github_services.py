@@ -40,7 +40,7 @@ def get_file(filename_path):
     url = f"{API_BASE}/{filename_path}"
 
     try:
-        response = requests.get(url, headers=HEADERS, timeout=30)
+        response = requests.get(url, headers=HEADERS, timeout=60)
 
         if response.status_code == 200:
             resp_json = response.json()
@@ -147,18 +147,24 @@ def create_or_update_file(filename_path, data, commit_message=None):
 def get_folder_contents(path):
     """Return list of file/folder metadata inside a GitHub folder."""
     url = f"{API_BASE}/{path}"
+    print(f"[DEBUG] Getting folder contents from: {url}") # Temporary debug print
 
-    response = requests.get(url, headers=HEADERS)
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=60)
+        print(f"[DEBUG] GitHub API Response Status: {response.status_code}") # Temporary debug print
+        print(f"[DEBUG] GitHub API Response Body: {response.text}") # Temporary debug print
 
-    if response.status_code == 200:
-        contents = response.json()
-        if isinstance(contents, list):
-            # Return the raw list of contents, which includes 'type', 'name', etc.
-            return {"success": True, "data": contents}
+        if response.status_code == 200:
+            contents = response.json()
+            if isinstance(contents, list):
+                return contents, None
+            else:
+                return None, "Path is not a folder or is a file"
         else:
-            return {"success": False, "error": "Path is not a folder or is a file"}
-    else:
-        return {"success": False, "error": f"GitHub API Error: {response.status_code}, {response.text}"}
+            return None, f"GitHub API Error: {response.status_code}, {response.text}"
+    except requests.exceptions.RequestException as e:
+        print(f"[DEBUG] Request Exception: {e}") # Temporary debug print
+        return None, f"Request failed: {e}"
 
 
 if __name__ == '__main__':
