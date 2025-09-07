@@ -64,6 +64,18 @@ The `services/judge_service.py` is responsible for evaluating submitted code. It
 
 The `services/problem_service.py` is responsible for managing problems. It handles the creation of new problems, including validation of the problem data.
 
+#### Problem Management
+
+Problems are added and managed manually by directly modifying the `DATA` repository. The backend services will then read and serve these problems.
+
+### Utils
+
+The `utils` directory contains utility functions used throughout the backend application.
+
+#### JWT Token
+
+The `jwt_token.py` module provides functions for generating and verifying JSON Web Tokens (JWTs) for user authentication.
+
 ## Security Enhancements
 
 Recent updates have focused on improving the security posture of the backend. Key enhancements include:
@@ -77,6 +89,30 @@ Recent updates have focused on improving the security posture of the backend. Ke
 -   **Authorization Policy Update:** The `/api/users/<user_id>` endpoint now allows any authenticated user to view the profile details of any other user, aligning with the updated requirement for public profile viewing.
 
 These measures contribute to a more robust and secure application.
+
+## Running Tests
+
+To run the tests for the backend, navigate to the `backend-for-annaforces` directory and use the `pytest` command.
+
+### Running All Tests
+
+To run all tests, execute the following command:
+
+```bash
+pytest -s
+```
+
+### Running Specific Tests
+
+You can also run specific test files by providing the path to the test file:
+
+```bash
+pytest -s tests/utils/test_jwt_token.py
+```
+
+The `-s` flag is recommended to see the output of any `print` statements within the tests.
+
+For more details on the tests, see the `README.md` file in the `tests` directory.
 
 ## API Endpoints
 

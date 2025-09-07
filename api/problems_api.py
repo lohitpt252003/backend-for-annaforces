@@ -73,7 +73,6 @@ def get_problems(current_user):
 def get_problem_by_id(current_user, problem_id):
     problem_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}"
     meta_path = f"{problem_path}/meta.json"
-    problem_md_path = f"{problem_path}/problem.md"
     index_file_path = f"{GITHUB_PROBLEMS_BASE_PATH}/index.json"
 
     meta_content, _, meta_error = get_file(meta_path)
@@ -81,10 +80,6 @@ def get_problem_by_id(current_user, problem_id):
         if "not found" in meta_error["message"].lower():
             return jsonify({"error": "Problem not found"}), 404
         return jsonify({"error": meta_error["message"]}), 500
-
-    problem_md_content, _, problem_md_error = get_file(problem_md_path)
-    if problem_md_error:
-        return jsonify({"error": problem_md_error["message"]}), 500
 
     index_content, _, index_error = get_file(index_file_path)
     if index_error:
@@ -101,9 +96,68 @@ def get_problem_by_id(current_user, problem_id):
     except json.JSONDecodeError:
         return jsonify({"error": "Failed to decode JSON data"}), 500
 
+    header_path = f"{problem_path}/details/header.md"
+    description_path = f"{problem_path}/details/description.md"
+    input_path = f"{problem_path}/details/input.md"
+    output_path = f"{problem_path}/details/output.md"
+    notes_path = f"{problem_path}/details/notes.md"
+    constraints_path = f"{problem_path}/details/constraints.md"
+    samples_dir_path = f"{problem_path}/details/samples"
+
+    header_content, _, header_error = get_file(header_path)
+    description_content, _, description_error = get_file(description_path)
+    input_content, _, input_error = get_file(input_path)
+    output_content, _, output_error = get_file(output_path)
+    notes_content, _, notes_error = get_file(notes_path)
+    constraints_content, _, constraints_error = get_file(constraints_path)
+
+    # Check for errors in reading main problem files
+    for err in [header_error, description_error, input_error, output_error, notes_error, constraints_error]:
+        if err:
+            if "not found" in err["message"].lower():
+                return jsonify({"error": "Problem content not found"}), 404
+            return jsonify({"error": err["message"]}), 500
+
+    # Read samples
+    samples_data = []
+    samples_folder_contents, samples_folder_error = get_folder_contents(samples_dir_path)
+
+    if samples_folder_error:
+        # If samples folder not found, it might be an old problem or no samples, so proceed without samples
+        if "not found" not in samples_folder_error["message"].lower():
+            return jsonify({"error": samples_folder_error["message"]}), 500
+    else:
+        # Filter for directories (each representing a sample)
+        sample_dirs = [item for item in samples_folder_contents["data"] if item['type'] == 'dir']
+        
+        # Sort sample directories by name (e.g., sample1, sample2)
+        sample_dirs.sort(key=lambda x: int(x['name'].replace('sample', '')) if x['name'].startswith('sample') and x['name'].replace('sample', '').isdigit() else float('inf'))
+
+        for sample_dir in sample_dirs:
+            sample_input_path = f"{samples_dir_path}/{sample_dir['name']}/input.md"
+            sample_output_path = f"{samples_dir_path}/{sample_dir['name']}/output.md"
+            sample_description_path = f"{samples_dir_path}/{sample_dir['name']}/description.md"
+
+            sample_input_content, _, sample_input_error = get_file(sample_input_path)
+            sample_output_content, _, sample_output_error = get_file(sample_output_path)
+            sample_description_content, _, sample_description_error = get_file(sample_description_path)
+
+            # Handle errors for sample files (e.g., if a sample file is missing, treat it as empty)
+            samples_data.append({
+                "input": sample_input_content if not sample_input_error else "",
+                "output": sample_output_content if not sample_output_error else "",
+                "description": sample_description_content if not sample_description_error else ""
+            })
+
     response_data = {
         "meta": meta_data,
-        "problem_statement": problem_md_content
+        "header_content": header_content,
+        "description_content": description_content,
+        "input_content": input_content,
+        "output_content": output_content,
+        "notes_content": notes_content,
+        "constraints_content": constraints_content,
+        "samples_data": samples_data
     }
 
     return jsonify(response_data), 200
@@ -223,3 +277,4 @@ def get_problem_submissions(current_user, problem_id):
 #         return jsonify({"error": error_message}), 500
 
 #     return jsonify(result), 201
+

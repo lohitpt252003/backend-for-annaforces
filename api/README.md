@@ -74,7 +74,8 @@ This document provides an overview of the available APIs.
     "authors": ["boss", "baz"],
     "difficulty": "Easy"
   },
-  "problem_statement": "<problem statement in markdown>"
+  "problem_statement": "<problem statement in markdown>",
+  "constraints_content": "<problem constraints in markdown>"
 }
 ```
 
@@ -187,7 +188,7 @@ Possible error messages:
 
 **Method:** `POST`
 
-**Description:** Adds a new problem.
+**Description:** This API endpoint allows for programmatic addition of new problems. However, problems are primarily added and managed manually by directly modifying the `DATA` repository.
 
 **Request Body:**
 
