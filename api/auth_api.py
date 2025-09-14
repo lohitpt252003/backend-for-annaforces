@@ -105,13 +105,13 @@ def signup():
     if not all([username, password, name, email]):
         return jsonify({"error": "All fields (username, password, name, email) are required"}), 400
 
-    # Check if username already exists
+    # Check if username or email already exists
     try:
         users_folders, error = get_folder_contents(GITHUB_USERS_BASE_PATH)
         if error:
-            return jsonify({"error": "Could not retrieve users list to check for existing username."}), 500
+            return jsonify({"error": "Could not retrieve users list to check for existing username/email."}), 500
 
-        for item in users_folders:
+        for item in users_folders['data']:
             if item['type'] == 'dir':
                 meta_path = f"{GITHUB_USERS_BASE_PATH}/{item['name']}/meta.json"
                 meta_content, _, meta_error = get_file(meta_path)
@@ -119,8 +119,10 @@ def signup():
                     meta_data = json.loads(meta_content)
                     if meta_data.get('username') == username:
                         return jsonify({"error": "Username already exists"}), 409
+                    if meta_data.get('email') == email:
+                        return jsonify({"error": "Email already registered"}), 409
     except Exception as e:
-        return jsonify({"error": f"Error checking for existing username: {str(e)}"}), 500
+        return jsonify({"error": f"Error checking for existing username/email: {str(e)}"}), 500
 
     # Generate and send OTP
     otp = generate_otp()
@@ -160,10 +162,12 @@ def verify_otp_route():
         return jsonify({"error": "OTP expired."}), 400
 
     if user_data.get('otp_attempts', 0) >= 3:
+        del unverified_users[email] # Discard OTP after too many attempts
         return jsonify({"error": "Too many incorrect OTP attempts. Please try signing up again."}), 400
 
     if user_data['otp_secret'] != otp:
         user_data['otp_attempts'] = user_data.get('otp_attempts', 0) + 1
+        unverified_users[email] = user_data # Save updated attempts count
         return jsonify({"error": "Invalid OTP."}), 400
 
     # OTP is correct, now create the user
@@ -178,7 +182,7 @@ def verify_otp_route():
             return jsonify({"error": "Could not retrieve users list to generate new user ID."}), 500
 
         max_id = 0
-        for item in users_folders:
+        for item in users_folders['data']:
             if item['type'] == 'dir' and item['name'].startswith('U'):
                 try:
                     user_id_num = int(item['name'][1:])
@@ -267,7 +271,7 @@ def forgot_userid():
             return jsonify({"error": "Could not retrieve users list."}), 500
 
         user_found = False
-        for item in users_folders:
+        for item in users_folders['data']:
             if item['type'] == 'dir':
                 meta_path = f"{GITHUB_USERS_BASE_PATH}/{item['name']}/meta.json"
                 meta_content, _, meta_error = get_file(meta_path)
@@ -307,7 +311,7 @@ def request_password_reset():
             return jsonify({"error": "Could not retrieve users list."}), 500
 
         user_found = False
-        for item in users_folders:
+        for item in users_folders['data']:
             if item['type'] == 'dir':
                 meta_path = f"{GITHUB_USERS_BASE_PATH}/{item['name']}/meta.json"
                 meta_content, _, meta_error = get_file(meta_path)
@@ -358,10 +362,12 @@ def verify_password_reset_otp():
         return jsonify({"error": "OTP expired."}), 400
 
     if reset_data.get('otp_attempts', 0) >= 3:
+        del password_reset_otps[email] # Discard OTP after too many attempts
         return jsonify({"error": "Too many incorrect OTP attempts. Please try requesting a new OTP."}), 400
 
     if reset_data['otp_secret'] != otp:
         reset_data['otp_attempts'] = reset_data.get('otp_attempts', 0) + 1
+        password_reset_otps[email] = reset_data # Save updated attempts count
         return jsonify({"error": "Invalid OTP."}), 400
 
     user_id = reset_data['user_id']

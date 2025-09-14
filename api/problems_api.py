@@ -117,7 +117,6 @@ def get_problem_by_id(current_user, problem_id):
             if "not found" in err["message"].lower():
                 return jsonify({"error": "Problem content not found"}), 404
             return jsonify({"error": err["message"]}), 500
-
     # Read samples
     samples_data = []
     samples_folder_contents, samples_folder_error = get_folder_contents(samples_dir_path)
@@ -208,8 +207,12 @@ def submit_problem(current_user, problem_id):
     if not all([language, code]):
         return jsonify({"error": "Missing language or code in request body"}), 400
 
-    supported_languages = ["python", "c", "cpp"]
-    if language.lower() not in supported_languages:
+    language = data.get('language')
+    if language and language.lower() == 'cpp':
+        language = 'c++'
+
+    supported_languages = ["python", "c", "c++"]
+    if not language or language.lower() not in supported_languages:
         return jsonify({"error": f"Unsupported language: {language}. Supported languages are {', '.join(supported_languages)}"}), 400
 
     result = handle_new_submission(problem_id, user_id, language, code)

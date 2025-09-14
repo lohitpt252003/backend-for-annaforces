@@ -58,3 +58,13 @@ This directory contains various service modules used in the `backend-for-annafor
   - **Dependencies**: `json`, `services.github_services`, `config.github_config`.
 
 - `__pycache__`: Directory containing compiled Python files.
+
+## Recent Bug Fixes
+
+- **`judge_service.py`:**
+  - Fixed a bug related to tuple indexing when fetching test cases.
+- **`submission_service.py`:**
+  - Fixed an issue where the service was not returning detailed test results.
+  - Fixed a bug that caused the service to crash if there was an error adding a submission to the database.
+  - Corrected a syntax error that prevented the service from returning any value.
+  - Standardized the language parameter for C++ submissions to "c++".

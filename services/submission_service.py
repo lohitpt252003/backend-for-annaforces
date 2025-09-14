@@ -70,8 +70,10 @@ def handle_new_submission(problem_id, user_id, language, code):
     }
     add_problem_submission_result = add_file(problem_submission_path, json.dumps(problem_submission_data, indent=2), commit_message=f"[AUTO] Add {new_submission_id} to {problem_id} submissions")
     if "error" in add_problem_submission_result:
-        # Log error but continue
-        print(f"Error adding submission reference to problem: {add_problem_submission_result['message']}")
+        # Log error and return
+        error_msg = f"Error adding submission reference to problem: {add_problem_submission_result['message']}"
+        print(error_msg)
+        return {"error": error_msg}
 
 
     # 5. Update User Data
@@ -85,16 +87,19 @@ def handle_new_submission(problem_id, user_id, language, code):
     }
     add_user_submission_result = add_file(user_submission_path, json.dumps(user_submission_data, indent=2), commit_message=f"[AUTO] Add {new_submission_id} to {user_id} submissions")
     if "error" in add_user_submission_result:
-        # Log error but continue
-        print(f"Error adding submission reference to user: {add_user_submission_result['message']}")
+        # Log error and return
+        error_msg = f"Error adding submission reference to user: {add_user_submission_result['message']}"
+        print(error_msg)
+        return {"error": error_msg}
 
 
     # 6. Update global submission meta
     global_submissions_meta_data["number_of_submissions"] = new_submission_id_num
     update_global_meta_result = create_or_update_file(global_submissions_meta_path, json.dumps(global_submissions_meta_data, indent=2), commit_message=f"[AUTO] Update global submission count to {new_submission_id_num}")
     if "error" in update_global_meta_result:
-        # Log error but continue
-        print(f"Error updating global submission meta: {update_global_meta_result['message']}")
+        # Log error and return
+        error_msg = f"Error updating global submission meta: {update_global_meta_result['message']}"
+        print(error_msg)
+        return {"error": error_msg}
 
-
-    return {"message": "Submission successful", "submission_id": new_submission_id, "status": submission_meta_data["status"]}
+    return {"message": "Submission successful", "submission_id": new_submission_id, "status": submission_meta_data["status"], "test_results": judge_result["test_results"]}

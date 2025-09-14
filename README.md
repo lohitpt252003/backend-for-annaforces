@@ -4,7 +4,7 @@ This is the backend for the Annaforces project.
 
 ## Deployment
 
-The backend is deployed at: `https://backend-for-annaforces.onrender.com/`
+The backend is deployed at: `http://localhost:5000/`
 
 ## Services
 
@@ -90,25 +90,46 @@ Recent updates have focused on improving the security posture of the backend. Ke
 
 These measures contribute to a more robust and secure application.
 
+## Recent Bug Fixes
+
+- **Submission Service:**
+  - Fixed an issue where the submission service was not returning detailed test results.
+  - Fixed a bug that caused the service to crash if there was an error adding a submission to the database.
+  - Corrected a syntax error that prevented the service from returning any value.
+- **Judge Service:**
+  - Fixed a bug related to tuple indexing when fetching test cases.
+- **API:**
+  - Standardized the language parameter for C++ submissions to "c++". Submissions with "cpp" are now automatically converted.
+
 ## Running Tests
 
 To run the tests for the backend, navigate to the `backend-for-annaforces` directory and use the `pytest` command.
 
-### Running All Tests
+### Running All Tests (Utils Folder)
 
-To run all tests, execute the following command:
+To run all `unittest` tests specifically for the `utils` folder, execute the `test_all.py` script:
 
 ```bash
-pytest -s
+python tests/utils/test_all.py
 ```
+
+This script will automatically discover and run all `unittest` tests in `tests/utils`.
 
 ### Running Specific Tests
 
-You can also run specific test files by providing the path to the test file:
+You can also run specific test files directly using Python. For example, to run the JWT token tests:
 
 ```bash
-pytest -s tests/utils/test_jwt_token.py
+python tests/utils/test_jwt_token.py
 ```
+
+To run the Email Service tests:
+
+```bash
+python tests/services/test_email_service.py
+```
+
+These test files use the `unittest` framework and include necessary `sys.path` adjustments for module imports.
 
 The `-s` flag is recommended to see the output of any `print` statements within the tests.
 

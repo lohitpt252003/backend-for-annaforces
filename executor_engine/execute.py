@@ -37,7 +37,7 @@ def execute_code(language='python',
         }
 
     # 2. Check for Docker and prepare the image
-    image_name = "sandbox-image:latest"
+    image_name = "code-runner-image:latest"
     try:
         # Check if Docker is running
         subprocess.run(["docker", "info"], check=True, capture_output=True)
@@ -146,7 +146,7 @@ def execute_code(language='python',
             if exit_code == 124:
                 return {
                     "stdout": "", "stderr": "", "err": f"Time Limit Exceeded (> {time_limit_s}s)",
-                    "timetaken": time_limit_s, "memorytaken": mem_taken, "success": False
+                    "timetaken": time_limit_s * 1000, "memorytaken": mem_taken, "success": False
                 }
             elif exit_code == 137:
                  return {
@@ -168,6 +168,7 @@ def execute_code(language='python',
             # 10. Clean up the container
             if container_id:
                 subprocess.run(["docker", "rm", "-f", container_id], capture_output=True)
+
 
 if __name__ == '__main__':
     import json

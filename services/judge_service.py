@@ -14,13 +14,14 @@ def get_testcases(problem_id):
     testcases = []
     testcases_path = f'{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/testcases'
     
-    contents_response = get_folder_contents(testcases_path)
+    contents_response, error = get_folder_contents(testcases_path)
 
-    if not contents_response['success']:
-        print(f"Error fetching test cases for problem {problem_id}: {contents_response['error']}")
+    if error or not contents_response.get('success'):
+        error_message = error['message'] if error else contents_response.get('error', 'Unknown error')
+        print(f"Error fetching test cases for problem {problem_id}: {error_message}")
         return []
 
-    contents_list = contents_response['data']
+    contents_list = contents_response.get('data', [])
     
     file_download_urls = {}
     for item in contents_list:
@@ -89,7 +90,7 @@ def grade_submission(code, language, problem_id):
     # Convert time limit from milliseconds to seconds for the judge service
     time_limit_s = max(1, time_limit_ms // 1000) # Ensure at least 1 second
 
-    if language.lower() == 'cpp': language = 'c++'
+    
     testcases = get_testcases(problem_id)
     
     if not testcases:
@@ -159,7 +160,8 @@ def grade_submission(code, language, problem_id):
             "execution_time": timetaken,
             "memory_usage": memorytaken,
             "actual_output": stdout.strip(),
-            "expected_output": expected_stdout
+            "expected_output": expected_stdout,
+            "input": stdin
         })
 
     # Determine overall status based on the verdicts

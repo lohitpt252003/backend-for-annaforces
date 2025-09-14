@@ -139,7 +139,7 @@ Possible error messages:
 
 **Method:** `POST`
 
-**Description:** Submits a solution for a specific problem. Requires a valid JWT in the Authorization header. Only `c`, `c++`, and `python` languages are supported. When a solution is submitted, the `number_of_submissions` is automatically incremented for both the user and the problem. All related file changes in the `DATA` repository are committed with a message prefixed with `[AUTO]`.
+**Description:** Submits a solution for a specific problem. Requires a valid JWT in the Authorization header. The supported languages are `c`, `c++`, and `python`. The language `cpp` is also accepted as an alias for `c++`. When a solution is submitted, the `number_of_submissions` is automatically incremented for both the user and the problem. All related file changes in the `DATA` repository are committed with a message prefixed with `[AUTO]`.
 
 **Authorization Header:**
 
@@ -164,7 +164,18 @@ Possible error messages:
 {
   "message": "Submission successful",
   "status": "accepted",
-  "submission_id": "S12"
+  "submission_id": "S12",
+  "test_results": [
+    {
+      "actual_output": "0",
+      "execution_time": 0.09,
+      "expected_output": "0",
+      "memory_usage": 7.8203125,
+      "message": "Test case passed",
+      "status": "passed",
+      "test_case_number": 1
+    }
+  ]
 }
 ```
 
