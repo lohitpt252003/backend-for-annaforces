@@ -11,6 +11,8 @@ from api.auth_api import auth_bp
 from api.submissions_api import submissions_bp
 
 def create_app():
+    import logging
+    logging.basicConfig(filename='app.log', level=logging.DEBUG)
     app = Flask(__name__)
     CORS(app)
 

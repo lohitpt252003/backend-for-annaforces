@@ -19,10 +19,10 @@ This directory contains various service modules used in the `backend-for-annafor
   - **Dependencies**: `firebase_admin`, `argon2`, `dotenv`, `json`, `os`.
 
 - `github_services.py`:
-  - **Description**: Provides an interface for interacting with the GitHub API to manage files and directories within a specified repository.
+  - **Description**: Provides an interface for interacting with the GitHub API to manage files and directories within a specified repository. It now supports fetching files larger than 1MB by using the `download_url` provided by the GitHub API.
   - **Key Functions**:
     - `get_github_config()`: Retrieves GitHub authentication details from environment variables.
-    - `get_file(filename_path)`: Fetches the content and SHA of a file.
+    - `get_file(filename_path)`: Fetches the content and SHA of a file, handling large files transparently.
     - `add_file(filename_path, data, commit_message)`: Adds a new file to the repository.
     - `update_file(filename_path, data, commit_message)`: Updates an existing file.
     - `create_or_update_file(filename_path, data, commit_message)`: Adds a file if it doesn't exist, otherwise updates it.
@@ -61,6 +61,8 @@ This directory contains various service modules used in the `backend-for-annafor
 
 ## Recent Bug Fixes
 
+- **`github_services.py`:**
+  - Fixed an issue where files larger than 1MB could not be fetched from GitHub. The service now uses the `download_url` for large files.
 - **`judge_service.py`:**
   - Fixed a bug related to tuple indexing when fetching test cases.
 - **`submission_service.py`:**

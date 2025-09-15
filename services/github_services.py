@@ -37,39 +37,40 @@ def get_file(filename_path):
     if not filename_path:
         return None, None, {"error": True, "message": "filename_path cannot be empty"}
 
-    local_base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'DATA'))
-    local_full_path = os.path.join(local_base_path, filename_path.replace('data/', ''))
+    url = f"{API_BASE}/{filename_path}"
 
-    if os.path.exists(local_full_path) and os.path.isfile(local_full_path):
-        # Handle local file system access
-        try:
-            with open(local_full_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            return content, "local_sha", None # Return a dummy SHA for local files
-        except Exception as e:
-            return None, None, {"error": True, "message": f"Error reading local file: {e}"}
-    else:
-        # Fallback to GitHub API
-        url = f"{API_BASE}/{filename_path}"
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=60)
 
-        try:
-            response = requests.get(url, headers=HEADERS, timeout=60)
+        if response.status_code == 200:
+            resp_json = response.json()
+            sha = resp_json['sha']
 
-            if response.status_code == 200:
-                resp_json = response.json()
+            if resp_json.get('content'):
                 try:
                     content = base64.b64decode(resp_json['content']).decode('utf-8')
                 except UnicodeDecodeError:
                     content = base64.b64decode(resp_json['content'])
-                sha = resp_json['sha']
-                return content, sha, None
-            elif response.status_code == 404:
-                return None, None, {"error": True, "message": f"File not found: {filename_path}"}
             else:
-                return None, None, {"error": True, "message": f"Error getting file: {response.status_code} - {response.text}"}
+                # File is too large, use download_url
+                download_url = resp_json.get('download_url')
+                if not download_url:
+                    return None, None, {"error": True, "message": "File is large but no download_url found"}
+                
+                download_response = requests.get(download_url, timeout=60)
+                if download_response.status_code == 200:
+                    content = download_response.text
+                else:
+                    return None, None, {"error": True, "message": f"Failed to download large file: {download_response.status_code} - {download_response.text}"}
 
-        except requests.exceptions.RequestException as e:
-            return None, None, {"error": True, "message": f"Request failed: {e}"}
+            return content, sha, None
+        elif response.status_code == 404:
+            return None, None, {"error": True, "message": f"File not found: {filename_path}"}
+        else:
+            return None, None, {"error": True, "message": f"Error getting file: {response.status_code} - {response.text}"}
+
+    except requests.exceptions.RequestException as e:
+        return None, None, {"error": True, "message": f"Request failed: {e}"}
 
 
 def add_file(filename_path, data, commit_message=None, retries=3):
@@ -159,40 +160,25 @@ def create_or_update_file(filename_path, data, commit_message=None):
 
 def get_folder_contents(path):
     """Return list of file/folder metadata inside a GitHub folder or local path."""
-    local_base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'DATA'))
-    local_full_path = os.path.join(local_base_path, path.replace('data/', ''))
+    url = f"{API_BASE}/{path}"
+    print(f"[DEBUG] Getting folder contents from GitHub: {url}") # Temporary debug print
 
-    if os.path.exists(local_full_path) and os.path.isdir(local_full_path):
-        # Handle local file system access
-        contents = []
-        for item_name in os.listdir(local_full_path):
-            item_path = os.path.join(local_full_path, item_name)
-            if os.path.isdir(item_path):
-                contents.append({'name': item_name, 'type': 'dir', 'path': os.path.join(path, item_name)})
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=60)
+        print(f"[DEBUG] GitHub API Response Status: {response.status_code}") # Temporary debug print
+        print(f"[DEBUG] GitHub API Response Body: {response.text}") # Temporary debug print
+
+        if response.status_code == 200:
+            contents = response.json()
+            if isinstance(contents, list):
+                return {"success": True, "data": contents}, None
             else:
-                contents.append({'name': item_name, 'type': 'file', 'path': os.path.join(path, item_name), 'download_url': f'file:///{item_path}'})
-        return {"success": True, "data": contents}, None
-    else:
-        # Fallback to GitHub API
-        url = f"{API_BASE}/{path}"
-        print(f"[DEBUG] Getting folder contents from GitHub: {url}") # Temporary debug print
-
-        try:
-            response = requests.get(url, headers=HEADERS, timeout=60)
-            print(f"[DEBUG] GitHub API Response Status: {response.status_code}") # Temporary debug print
-            print(f"[DEBUG] GitHub API Response Body: {response.text}") # Temporary debug print
-
-            if response.status_code == 200:
-                contents = response.json()
-                if isinstance(contents, list):
-                    return {"success": True, "data": contents}, None
-                else:
-                    return {"success": False, "error": "Path is not a folder or is a file"}, None
-            else:
-                return {"success": False, "error": f"GitHub API Error: {response.status_code}, {response.text}"}, None
-        except requests.exceptions.RequestException as e:
-            print(f"[DEBUG] Request Exception: {e}") # Temporary debug print
-            return {"success": False, "error": f"Request failed: {e}"}, None
+                return {"success": False, "error": "Path is not a folder or is a file"}, None
+        else:
+            return {"success": False, "error": f"GitHub API Error: {response.status_code}, {response.text}"}, None
+    except requests.exceptions.RequestException as e:
+        print(f"[DEBUG] Request Exception: {e}") # Temporary debug print
+        return {"success": False, "error": f"Request failed: {e}"}, None
 
 
 if __name__ == '__main__':

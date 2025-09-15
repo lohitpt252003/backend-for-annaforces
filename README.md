@@ -92,6 +92,8 @@ These measures contribute to a more robust and secure application.
 
 ## Recent Bug Fixes
 
+- **GitHub Service:**
+  - Fixed an issue where files larger than 1MB could not be fetched from GitHub. The service now uses the `download_url` for large files.
 - **Submission Service:**
   - Fixed an issue where the submission service was not returning detailed test results.
   - Fixed a bug that caused the service to crash if there was an error adding a submission to the database.
