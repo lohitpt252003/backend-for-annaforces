@@ -57,6 +57,12 @@ def update_meta_submissions(meta_path):
 @problems_bp.route('/', methods=['GET'])
 @token_required
 def get_problems(current_user):
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 3, type=int)
+    search_term = request.args.get('search', '').lower()
+    filter_difficulty = request.args.get('difficulty', '').lower()
+    filter_tag = request.args.get('tag', '').lower()
+
     file_path = f"{GITHUB_PROBLEMS_BASE_PATH}/index.json"
     content, _, error = get_file(file_path)
 
@@ -64,7 +70,40 @@ def get_problems(current_user):
         return jsonify({"error": error["message"]}), 500
 
     try:
-        return jsonify(json.loads(content)), 200
+        problems_data = json.loads(content)
+        all_problems_list = list(problems_data.items())
+
+        # Apply filters
+        filtered_problems = []
+        for problem_id, problem_info in all_problems_list:
+            # Search filter
+            if search_term and not (
+                search_term in problem_info.get('title', '').lower() or
+                search_term in problem_id.lower()
+            ):
+                continue
+
+            # Difficulty filter
+            if filter_difficulty and problem_info.get('difficulty', '').lower() != filter_difficulty:
+                continue
+
+            # Tag filter
+            if filter_tag and not any(tag.lower() == filter_tag for tag in problem_info.get('tags', [])):
+                continue
+
+            filtered_problems.append((problem_id, problem_info))
+
+        total_problems = len(filtered_problems)
+        start = (page - 1) * per_page
+        end = start + per_page
+        paginated_problems = dict(filtered_problems[start:end])
+
+        return jsonify({
+            'problems': paginated_problems,
+            'total_problems': total_problems,
+            'page': page,
+            'per_page': per_page
+        }), 200
     except json.JSONDecodeError:
         return jsonify({"error": "Failed to decode JSON"}), 500
 
