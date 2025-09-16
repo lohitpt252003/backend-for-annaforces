@@ -268,6 +268,61 @@ curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password
 }
 ```
 
+### Users API
+
+**Endpoint:** `/api/users/<user_id>/submissions`
+
+**Method:** `GET`
+
+**Description:** Retrieves all submissions for a specific user with pagination. Requires a valid JWT in the Authorization header. The `user_id` must have the prefix 'U' (e.g., 'U1') and consist only of alphanumeric characters. Submissions are sorted by timestamp in descending order (newest first).
+
+**URL Parameters:**
+
+- `user_id`: The ID of the user to retrieve submissions for.
+
+**Query Parameters:**
+
+- `page`: (Optional) The page number to retrieve. Defaults to 1.
+- `per_page`: (Optional) The number of submissions per page. Defaults to 10.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "submissions": [
+    {
+      "submission_id": "S1",
+      "user_id": "U1",
+      "problem_id": "P1",
+      "timestamp": "2023-10-27T10:00:00Z",
+      "status": "Accepted",
+      "language": "cpp"
+    }
+  ],
+  "total_submissions": 1,
+  "page": 1,
+  "per_page": 10
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized (if token is missing or invalid), 400 Bad Request (if user_id format is invalid), 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
 ### Google Sign-In
 
 **Endpoint:** `/api/auth/google-signin`
