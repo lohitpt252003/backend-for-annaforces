@@ -270,6 +270,9 @@ def submit_problem(current_user, problem_id):
 @problems_bp.route('/<problem_id>/submissions', methods=['GET'])
 @token_required
 def get_problem_submissions(current_user, problem_id):
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+
     submissions_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/submissions"
     
     response, error = get_folder_contents(submissions_path)
@@ -277,7 +280,7 @@ def get_problem_submissions(current_user, problem_id):
     if not response.get("success"):
         return jsonify({"error": response.get("error", "Failed to get submissions")}), 500
 
-    submissions = []
+    all_submissions = []
     for item in response["data"]:
         if item['type'] == 'file' and item['name'].endswith(".json"):
             try:
@@ -287,19 +290,32 @@ def get_problem_submissions(current_user, problem_id):
                     # Read local file directly
                     local_file_path = item['download_url'][len('file:///'):]
                     with open(local_file_path, 'r', encoding='utf-8') as f:
-                        submissions.append(json.loads(f.read()))
+                        all_submissions.append(json.loads(f.read()))
                 else:
                     # Fetch from URL for GitHub files
                     file_content_resp = requests.get(item['download_url'])
                     if file_content_resp.status_code == 200:
-                        submissions.append(json.loads(file_content_resp.text))
+                        all_submissions.append(json.loads(file_content_resp.text))
                     else:
                         print(f"Error fetching content for {item['path']}: HTTP {file_content_resp.status_code}")
             except json.JSONDecodeError:
                 print(f"Error decoding JSON for {item['path']}")
                 continue
 
-    return jsonify(submissions), 200
+    # Sort submissions by timestamp in descending order (newest first)
+    all_submissions.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+
+    total_submissions = len(all_submissions)
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated_submissions = all_submissions[start:end]
+
+    return jsonify({
+        'submissions': paginated_submissions,
+        'total_submissions': total_submissions,
+        'page': page,
+        'per_page': per_page
+    }), 200
 
 # @problems_bp.route('/add', methods=['POST'])
 # def add_problem():

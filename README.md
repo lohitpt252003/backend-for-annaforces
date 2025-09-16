@@ -141,16 +141,131 @@ For more details on the tests, see the `README.md` file in the `tests` directory
 
 ### Auth API
 
-## API Endpoints
-
-### Auth API
-
 The `/api/auth/login` endpoint handles user authentication. It expects a `user_id` and `password` in the request body. Upon successful authentication, it returns a JWT token. If the user is not found, a specific error message is returned.
 
 **Example to get a token:**
 
 ```bash
 curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password": "1234"}" https://backend-for-annaforces.onrender.com/api/auth/login
+```
+
+### Problems API
+
+**Endpoint:** `/api/problems`
+
+**Method:** `GET`
+
+**Description:** Retrieves a list of all problems with pagination and filtering capabilities. Requires a valid JWT in the Authorization header.
+
+**Query Parameters:**
+
+- `page`: (Optional) The page number to retrieve. Defaults to 1.
+- `per_page`: (Optional) The number of problems per page. Defaults to 3.
+- `search`: (Optional) A search term to filter problems by title or ID.
+- `difficulty`: (Optional) Filter problems by difficulty (e.g., "Easy", "Medium", "Hard").
+- `tag`: (Optional) Filter problems by a specific tag.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "problems": {
+    "P1": {
+      "title": "Add",
+      "difficulty": "Easy",
+      "tags": ["easy", "input", "output"],
+      "authors": ["boss", "baz"]
+    },
+    "P2": {
+      "title": "Subtract",
+      "difficulty": "Easy",
+      "tags": ["easy", "input", "output"],
+      "authors": ["baz", "boss"]
+    }
+  },
+  "total_problems": 5,
+  "page": 1,
+  "per_page": 3
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized (if token is missing or invalid), 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+**Endpoint:** `/api/problems/<problem_id>/submissions`
+
+**Method:** `GET`
+
+**Description:** Retrieves all submissions for a specific problem with pagination. Requires a valid JWT in the Authorization header. The `problem_id` must have the prefix 'P' (e.g., 'P1'). Submissions are sorted by timestamp in descending order (newest first).
+
+**URL Parameters:**
+
+- `problem_id`: The ID of the problem to retrieve submissions for.
+
+**Query Parameters:**
+
+- `page`: (Optional) The page number to retrieve. Defaults to 1.
+- `per_page`: (Optional) The number of submissions per page. Defaults to 10.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "submissions": [
+    {
+      "submission_id": "S1",
+      "user_id": "U1",
+      "problem_id": "P1",
+      "timestamp": "2023-10-27T10:00:00Z",
+      "status": "Accepted",
+      "language": "cpp"
+    },
+    {
+      "submission_id": "S2",
+      "user_id": "U2",
+      "problem_id": "P1",
+      "timestamp": "2023-10-27T10:05:00Z",
+      "status": "Wrong Answer",
+      "language": "python"
+    }
+  ],
+  "total_submissions": 2,
+  "page": 1,
+  "per_page": 10
+}
+```
+
+**Error Response:**
+
+- **Code:** 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
 ```
 
 ### Google Sign-In
