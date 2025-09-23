@@ -39,9 +39,6 @@ def get_user_by_id(current_user, user_id):
 @users_bp.route('/<user_id>/submissions', methods=['GET'])
 @token_required
 def get_user_submissions(current_user, user_id):
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
-
     submissions, error = get_user_submissions_service(user_id)
 
     if error:
@@ -50,16 +47,9 @@ def get_user_submissions(current_user, user_id):
     # Sort submissions by timestamp in descending order (newest first)
     submissions.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
 
-    total_submissions = len(submissions)
-    start = (page - 1) * per_page
-    end = start + per_page
-    paginated_submissions = submissions[start:end]
-
     return jsonify({
-        'submissions': paginated_submissions,
-        'total_submissions': total_submissions,
-        'page': page,
-        'per_page': per_page
+        'submissions': submissions,
+        'total_submissions': len(submissions)
     }), 200
 
 @users_bp.route('/<user_id>/solved', methods=['GET'])

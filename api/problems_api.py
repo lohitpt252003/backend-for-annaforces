@@ -57,8 +57,6 @@ def update_meta_submissions(meta_path):
 @problems_bp.route('/', methods=['GET'])
 @token_required
 def get_problems(current_user):
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 3, type=int)
     search_term = request.args.get('search', '').lower()
     filter_difficulty = request.args.get('difficulty', '').lower()
     filter_tag = request.args.get('tag', '').lower()
@@ -94,15 +92,10 @@ def get_problems(current_user):
             filtered_problems.append((problem_id, problem_info))
 
         total_problems = len(filtered_problems)
-        start = (page - 1) * per_page
-        end = start + per_page
-        paginated_problems = dict(filtered_problems[start:end])
-
+        
         return jsonify({
-            'problems': paginated_problems,
-            'total_problems': total_problems,
-            'page': page,
-            'per_page': per_page
+            'problems': dict(filtered_problems),
+            'total_problems': total_problems
         }), 200
     except json.JSONDecodeError:
         return jsonify({"error": "Failed to decode JSON"}), 500
@@ -270,9 +263,6 @@ def submit_problem(current_user, problem_id):
 @problems_bp.route('/<problem_id>/submissions', methods=['GET'])
 @token_required
 def get_problem_submissions(current_user, problem_id):
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
-
     submissions_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/submissions"
     
     response, error = get_folder_contents(submissions_path)
@@ -305,16 +295,9 @@ def get_problem_submissions(current_user, problem_id):
     # Sort submissions by timestamp in descending order (newest first)
     all_submissions.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
 
-    total_submissions = len(all_submissions)
-    start = (page - 1) * per_page
-    end = start + per_page
-    paginated_submissions = all_submissions[start:end]
-
     return jsonify({
-        'submissions': paginated_submissions,
-        'total_submissions': total_submissions,
-        'page': page,
-        'per_page': per_page
+        'submissions': all_submissions,
+        'total_submissions': len(all_submissions)
     }), 200
 
 # @problems_bp.route('/add', methods=['POST'])

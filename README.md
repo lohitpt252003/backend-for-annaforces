@@ -155,12 +155,10 @@ curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password
 
 **Method:** `GET`
 
-**Description:** Retrieves a list of all problems with pagination and filtering capabilities. Requires a valid JWT in the Authorization header.
+**Description:** Retrieves a list of all problems with filtering capabilities. Requires a valid JWT in the Authorization header.
 
 **Query Parameters:**
 
-- `page`: (Optional) The page number to retrieve. Defaults to 1.
-- `per_page`: (Optional) The number of problems per page. Defaults to 3.
 - `search`: (Optional) A search term to filter problems by title or ID.
 - `difficulty`: (Optional) Filter problems by difficulty (e.g., "Easy", "Medium", "Hard").
 - `tag`: (Optional) Filter problems by a specific tag.
@@ -190,9 +188,7 @@ curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password
       "authors": ["baz", "boss"]
     }
   },
-  "total_problems": 5,
-  "page": 1,
-  "per_page": 3
+  "total_problems": 5
 }
 ```
 
@@ -211,16 +207,11 @@ curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password
 
 **Method:** `GET`
 
-**Description:** Retrieves all submissions for a specific problem with pagination. Requires a valid JWT in the Authorization header. The `problem_id` must have the prefix 'P' (e.g., 'P1'). Submissions are sorted by timestamp in descending order (newest first).
+**Description:** Retrieves all submissions for a specific problem. Requires a valid JWT in the Authorization header. The `problem_id` must have the prefix 'P' (e.g., 'P1'). Submissions are sorted by timestamp in descending order (newest first).
 
 **URL Parameters:**
 
 - `problem_id`: The ID of the problem to retrieve submissions for.
-
-**Query Parameters:**
-
-- `page`: (Optional) The page number to retrieve. Defaults to 1.
-- `per_page`: (Optional) The number of submissions per page. Defaults to 10.
 
 **Authorization Header:**
 
@@ -251,9 +242,7 @@ curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password
       "language": "python"
     }
   ],
-  "total_submissions": 2,
-  "page": 1,
-  "per_page": 10
+  "total_submissions": 2
 }
 ```
 
@@ -274,16 +263,11 @@ curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password
 
 **Method:** `GET`
 
-**Description:** Retrieves all submissions for a specific user with pagination. Requires a valid JWT in the Authorization header. The `user_id` must have the prefix 'U' (e.g., 'U1') and consist only of alphanumeric characters. Submissions are sorted by timestamp in descending order (newest first).
+**Description:** Retrieves all submissions for a specific user. Requires a valid JWT in the Authorization header. The `user_id` must have the prefix 'U' (e.g., 'U1') and consist only of alphanumeric characters. Submissions are sorted by timestamp in descending order (newest first).
 
 **URL Parameters:**
 
 - `user_id`: The ID of the user to retrieve submissions for.
-
-**Query Parameters:**
-
-- `page`: (Optional) The page number to retrieve. Defaults to 1.
-- `per_page`: (Optional) The number of submissions per page. Defaults to 10.
 
 **Authorization Header:**
 
@@ -306,9 +290,7 @@ curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password
       "language": "cpp"
     }
   ],
-  "total_submissions": 1,
-  "page": 1,
-  "per_page": 10
+  "total_submissions": 1
 }
 ```
 
