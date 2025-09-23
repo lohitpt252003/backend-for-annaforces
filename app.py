@@ -9,10 +9,10 @@ from api.problems_api import problems_bp
 from api.users_api import users_bp
 from api.auth_api import auth_bp
 from api.submissions_api import submissions_bp
+from api.contests_api import contests_api
 
 def create_app():
-    import logging
-    logging.basicConfig(filename='app.log', level=logging.DEBUG)
+    # import loggingme='app.log', level=logging.DEBUG)
     app = Flask(__name__)
     CORS(app)
 
@@ -33,6 +33,7 @@ def create_app():
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(submissions_bp, url_prefix='/api/submissions')
+    app.register_blueprint(contests_api, url_prefix='/api/contests')
 
     @app.route("/")
     def root():

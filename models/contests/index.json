@@ -1,0 +1,11 @@
+[
+    {
+        "id": "C1",
+        "name": "Genesis Contest",
+        "description": "The first-ever contest on AnnaForces.",
+        "problems": ["P1", "P2", "P6"],
+        "startTime": "2025-10-01T00:00:00Z",
+        "endTime": "2025-10-07T23:59:59Z",
+        "authors": ["Gemini"]
+    }
+]

@@ -296,7 +296,144 @@ Possible error messages:
 ```
 
 
-## Users API
+## Submissions API
+
+**Endpoint:** `/api/submissions/<submission_id>`
+
+**Method:** `GET`
+
+**Description:** Retrieves detailed information about a specific submission, including code, status, and test case results. Requires a valid JWT in the Authorization header.
+
+**URL Parameters:**
+
+- `submission_id`: The ID of the submission to retrieve.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "submission_id": "S1",
+  "problem_id": "P1",
+  "user_id": "U1",
+  "language": "python",
+  "code": "print(1+2)",
+  "status": "Accepted",
+  "timestamp": "2023-10-27T10:00:00Z",
+  "test_cases": [
+    {
+      "test_case_id": 1,
+      "status": "Accepted",
+      "time_taken": 0.01,
+      "memory_used": 1024
+    }
+  ]
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized, 404 Not Found, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+## Contests API
+
+**Endpoint:** `/api/contests`
+
+**Method:** `GET`
+
+**Description:** Retrieves a list of all contests with filtering capabilities. Requires a valid JWT in the Authorization header.
+
+**Query Parameters:**
+
+- `search`: (Optional) A search term to filter contests by name or ID.
+- `author`: (Optional) Filter contests by a specific author.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+[
+    {
+        "id": "C1",
+        "name": "Genesis Contest",
+        "description": "The first-ever contest on AnnaForces.",
+        "problems": ["P1", "P2", "P6"],
+        "startTime": "2025-10-01T00:00:00Z",
+        "endTime": "2025-10-07T23:59:59Z",
+        "authors": ["Gemini"]
+    }
+]
+```
+
+**Error Response:**
+
+- **Code:** 404 Not Found, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+**Endpoint:** `/api/contests/<contest_id>`
+
+**Method:** `GET`
+
+**Description:** Retrieves detailed information about a specific contest, including its metadata, description, and theoretical background.
+
+**URL Parameters:**
+
+- `contest_id`: The ID of the contest to retrieve.
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+    "id": "C1",
+    "name": "Genesis Contest",
+    "description": "The first-ever contest on AnnaForces.",
+    "problems": ["P1", "P2", "P6"],
+    "startTime": "2025-10-01T00:00:00Z",
+    "endTime": "2025-10-07T23:59:59Z",
+    "authors": ["Gemini"],
+    "contest_description": "# Genesis Contest\n\nThis is the inaugural contest for AnnaForces. It features a selection of introductory problems designed to test fundamental programming skills.\n\n## Rules\n\n*   Participants must submit solutions in C, C++, or Python.\n*   Solutions will be judged based on correctness, time efficiency, and memory usage.\n*   Standard competitive programming rules apply.\n\nGood luck to all participants!",
+    "contest_theory": "# Theory Behind the Genesis Contest\n\nThe problems in this contest are designed to cover basic algorithmic concepts such as:\n\n*   **Input/Output Handling:** Reading data from standard input and writing to standard output.\n*   **Conditional Statements:** Using `if-else` structures to make decisions.\n*   **Basic Arithmetic:** Performing addition, subtraction, multiplication, and division.\n*   **Finding Maximum/Minimum:** Identifying the largest or smallest among a set of numbers.\n\nThese fundamental concepts are crucial for building more complex algorithms and solving advanced problems in competitive programming."
+}
+```
+
+**Error Response:**
+
+- **Code:** 404 Not Found, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
 
 **Endpoint:** `/api/users/`
 
