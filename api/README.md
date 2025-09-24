@@ -75,7 +75,8 @@ This document provides an overview of the available APIs.
     "difficulty": "Easy"
   },
   "problem_statement": "<problem statement in markdown>",
-  "constraints_content": "<problem constraints in markdown>"
+  "constraints_content": "<problem constraints in markdown>",
+  "has_pdf_statement": true
 }
 ```
 
@@ -117,7 +118,8 @@ Possible error messages:
   "python": "<python solution code>",
   "cpp": "<cpp solution code>",
   "c": "<c solution code>",
-  "markdown": "<solution explanation in markdown>"
+  "markdown": "<solution explanation in markdown>",
+  "has_pdf_solution": true
 }
 ```
 
@@ -134,6 +136,78 @@ Possible error messages:
 
 Possible error messages:
 - `Solution files not found for this problem_id`
+
+**Endpoint:** `/api/problems/<problem_id>/statement.pdf`
+
+**Method:** `GET`
+
+**Description:** Retrieves the problem statement in PDF format. Requires a valid JWT in the Authorization header.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**URL Parameters:**
+
+- `problem_id`: The ID of the problem to retrieve the statement for.
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "pdf_data": "<base64 encoded pdf data>"
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized, 404 Not Found, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+**Endpoint:** `/api/problems/<problem_id>/solution.pdf`
+
+**Method:** `GET`
+
+**Description:** Retrieves the solution in PDF format. Requires a valid JWT in the Authorization header.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**URL Parameters:**
+
+- `problem_id`: The ID of the problem to retrieve the solution for.
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "pdf_data": "<base64 encoded pdf data>"
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized, 404 Not Found, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
 
 **Endpoint:** `/api/problems/<problem_id>/submit`
 

@@ -151,6 +151,19 @@ curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password
 
 ### Problems API
 
+**PDF Support**
+
+The API now supports PDF versions of problem statements and solutions. 
+
+- The `/api/problems/<problem_id>` endpoint will now include a `has_pdf_statement` boolean flag.
+- The `/api/problems/<problem_id>/solution` endpoint will now include a `has_pdf_solution` boolean flag.
+
+If these flags are true, you can use the following endpoints to retrieve the PDF data:
+
+- `/api/problems/<problem_id>/statement.pdf`: Returns a JSON object with the base64 encoded PDF data for the problem statement.
+- `/api/problems/<problem_id>/solution.pdf`: Returns a JSON object with the base64 encoded PDF data for the solution.
+
+
 **Endpoint:** `/api/problems`
 
 **Method:** `GET`

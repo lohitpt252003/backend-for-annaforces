@@ -188,10 +188,17 @@ def get_problem_by_id(current_user, problem_id):
         "output_content": output_content,
         "notes_content": notes_content,
         "constraints_content": constraints_content,
-        "samples_data": samples_data
+        "samples_data": samples_data,
+        "has_pdf_statement": False
     }
 
+    pdf_path = f"{problem_path}/problem.pdf"
+    _, _, pdf_error = get_file(pdf_path)
+    if not pdf_error:
+        response_data["has_pdf_statement"] = True
+
     return jsonify(response_data), 200
+
 
 @problems_bp.route('/<problem_id>/solution', methods=['GET'])
 @token_required
@@ -218,6 +225,12 @@ def get_problem_solution(current_user, problem_id):
     # Check if at least one solution file was found, otherwise problem_id might be invalid
     if all(value is None for value in response_data.values()):
         return jsonify({"error": "Solution files not found for this problem_id"}), 404
+
+    response_data["has_pdf_solution"] = False
+    pdf_path = f"{solution_base_path}/solution.pdf"
+    _, _, pdf_error = get_file(pdf_path)
+    if not pdf_error:
+        response_data["has_pdf_solution"] = True
 
     return jsonify(response_data), 200
 
@@ -300,22 +313,35 @@ def get_problem_submissions(current_user, problem_id):
         'total_submissions': len(all_submissions)
     }), 200
 
-# @problems_bp.route('/add', methods=['POST'])
-# def add_problem():
-#     problem_data = request.get_json()
-#     result = add_problem_service(problem_data)
 
-#     if "error" in result:
-#         error_message = result["error"]
-#         if "Missing required field" in error_message or \
-#            "Testcases must be" in error_message or \
-#            "is missing 'input' or 'output'" in error_message or \
-#            "has empty 'input' or 'output'" in error_message or \
-#            "cannot be empty" in error_message or \
-#            "Missing required section in problem.md" in error_message:
-#             return jsonify({"error": error_message}), 400
-#         print(f'problems_api.py {error_message}')
-#         return jsonify({"error": error_message}), 500
+@problems_bp.route('/<problem_id>/statement.pdf', methods=['GET'])
+@token_required
+def get_problem_statement_pdf(current_user, problem_id):
+    pdf_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/problem.pdf"
+    pdf_content, _, pdf_error = get_file(pdf_path)
 
-#     return jsonify(result), 201
+    if pdf_error:
+        if "not found" in pdf_error["message"].lower():
+            return jsonify({"error": "PDF statement not found"}), 404
+        return jsonify({"error": pdf_error["message"]}), 500
+
+    # pdf_content is in bytes, encode it to base64 string to be able to jsonify it
+    pdf_data_base64 = base64.b64encode(pdf_content).decode('utf-8')
+
+    return jsonify({"pdf_data": pdf_data_base64})
+
+@problems_bp.route('/<problem_id>/solution.pdf', methods=['GET'])
+@token_required
+def get_problem_solution_pdf(current_user, problem_id):
+    pdf_path = f"data/solutions/{problem_id}/solution.pdf"
+    pdf_content, _, pdf_error = get_file(pdf_path)
+
+    if pdf_error:
+        if "not found" in pdf_error["message"].lower():
+            return jsonify({"error": "PDF solution not found"}), 404
+        return jsonify({"error": pdf_error["message"]}), 500
+
+    pdf_data_base64 = base64.b64encode(pdf_content).decode('utf-8')
+
+    return jsonify({"pdf_data": pdf_data_base64})
 
