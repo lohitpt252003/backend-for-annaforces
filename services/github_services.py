@@ -4,9 +4,12 @@ import json
 import os
 import time
 from dotenv import load_dotenv
+import queue
+import threading
 
 load_dotenv()
 
+# --- GitHub Configuration ---
 def get_github_config():
     token = os.getenv("GITHUB_TOKEN")
     repo = os.getenv("GITHUB_REPO")
@@ -32,7 +35,23 @@ HEADERS = {
     "X-GitHub-Api-Version": "2022-11-28"
 }
 
+# --- In-Memory Queue for Write Operations ---
+write_queue = queue.Queue()
 
+def _worker():
+    while True:
+        try:
+            func, args, kwargs = write_queue.get()
+            func(*args, **kwargs)
+            write_queue.task_done()
+        except Exception as e:
+            print(f"Error in worker thread: {e}")
+
+# Start the worker thread
+worker_thread = threading.Thread(target=_worker, daemon=True)
+worker_thread.start()
+
+# --- Read Operations (Direct Execution) ---
 def get_file(filename_path):
     if not filename_path:
         return None, None, {"error": True, "message": "filename_path cannot be empty"}
@@ -52,7 +71,6 @@ def get_file(filename_path):
                 except UnicodeDecodeError:
                     content = base64.b64decode(resp_json['content'])
             else:
-                # File is too large, use download_url
                 download_url = resp_json.get('download_url')
                 if not download_url:
                     return None, None, {"error": True, "message": "File is large but no download_url found"}
@@ -72,102 +90,10 @@ def get_file(filename_path):
     except requests.exceptions.RequestException as e:
         return None, None, {"error": True, "message": f"Request failed: {e}"}
 
-
-def add_file(filename_path, data, commit_message=None, retries=3):
-    if not filename_path or data is None:
-        return {"error": True, "message": "filename_path and data cannot be empty"}
-
-    url = f"{API_BASE}/{filename_path}"
-    message = commit_message or f"Add {filename_path}"
-
-    payload = {
-        "message": message,
-        "content": base64.b64encode(str(data).encode('utf-8')).decode('ascii')
-    }
-
-    for attempt in range(retries):
-        try:
-            response = requests.put(url, headers=HEADERS, data=json.dumps(payload), timeout=30)
-            if response.status_code in [200, 201]:
-                return response.json()
-            elif response.status_code == 422:
-                msg = response.json().get('message', 'Unknown error')
-                return {"error": True, "message": f"Validation error: {msg}"}
-            elif response.status_code == 409:
-                return {"error": True, "message": f"Conflict - file may already exist: {filename_path}"}
-            else:
-                if attempt == retries - 1:
-                    return {"error": True, "message": f"Failed to add file: {response.status_code} - {response.text}"}
-                time.sleep(2 ** attempt)
-        except requests.exceptions.RequestException as e:
-            if attempt == retries - 1:
-                return {"error": True, "message": f"Request failed: {e}"}
-            time.sleep(2 ** attempt)
-
-    return {"error": True, "message": f"Failed to add file after {retries} retries"}
-
-
-def update_file(filename_path, data, commit_message=None, retries=3):
-    if not filename_path or data is None:
-        return {"error": True, "message": "filename_path and data cannot be empty"}
-
-    url = f"{API_BASE}/{filename_path}"
-    message = commit_message or f"Update {filename_path}"
-
-    sha_data = get_file(filename_path)
-    if sha_data[2] is not None:
-        return {"error": True, "message": f"Cannot update file - file not found or inaccessible: {sha_data[2]['message']}"}
-
-    sha = sha_data[1]
-
-    payload = {
-        "message": message,
-        "content": base64.b64encode(str(data).encode('utf-8')).decode('ascii'),
-        "sha": sha
-    }
-    
-    for attempt in range(int(retries)):
-        try:
-            response = requests.put(url, headers=HEADERS, data=json.dumps(payload), timeout=30)
-            if response.status_code in [200, 201]:
-                return response.json()
-            elif response.status_code == 409:
-                new_sha_data = get_file(filename_path)
-                if new_sha_data[2] is not None:
-                    return {"error": True, "message": "SHA conflict and unable to retrieve updated SHA"}
-                payload["sha"] = new_sha_data[1]
-                continue
-            else:
-                if attempt == retries - 1:
-                    return {"error": True, "message": f"Failed to update file: {response.status_code} - {response.text}"}
-                time.sleep(2 ** attempt)
-        except requests.exceptions.RequestException as e:
-            if attempt == retries - 1:
-                return {"error": True, "message": f"Request failed: {e}"}
-            time.sleep(2 ** attempt)
-
-    return {"error": True, "message": f"Failed to update file after {retries} retries"}
-
-
-def create_or_update_file(filename_path, data, commit_message=None):
-    file_data = get_file(filename_path)
-    if file_data[2] and "not found" in file_data[2]["message"].lower():
-        return add_file(filename_path, data, commit_message)
-    elif file_data[2]:
-        return {"error": True, "message": file_data[2]["message"]}
-    else:
-        return update_file(filename_path, data, commit_message)
-
 def get_folder_contents(path):
-    """Return list of file/folder metadata inside a GitHub folder or local path."""
     url = f"{API_BASE}/{path}"
-    print(f"[DEBUG] Getting folder contents from GitHub: {url}") # Temporary debug print
-
     try:
         response = requests.get(url, headers=HEADERS, timeout=60)
-        print(f"[DEBUG] GitHub API Response Status: {response.status_code}") # Temporary debug print
-        print(f"[DEBUG] GitHub API Response Body: {response.text}") # Temporary debug print
-
         if response.status_code == 200:
             contents = response.json()
             if isinstance(contents, list):
@@ -177,9 +103,124 @@ def get_folder_contents(path):
         else:
             return {"success": False, "error": f"GitHub API Error: {response.status_code}, {response.text}"}, None
     except requests.exceptions.RequestException as e:
-        print(f"[DEBUG] Request Exception: {e}") # Temporary debug print
         return {"success": False, "error": f"Request failed: {e}"}, None
+
+# --- Internal Write Operations (Executed by Worker) ---
+def _execute_add_file(filename_path, data, commit_message, retries=3):
+    url = f"{API_BASE}/{filename_path}"
+    message = commit_message or f"Add {filename_path}"
+    payload = {
+        "message": message,
+        "content": base64.b64encode(str(data).encode('utf-8')).decode('ascii')
+    }
+
+    for attempt in range(retries):
+        try:
+            response = requests.put(url, headers=HEADERS, data=json.dumps(payload), timeout=30)
+            if response.status_code in [200, 201]:
+                print(f"Successfully added file: {filename_path}")
+                return
+            elif response.status_code == 422:
+                print(f"Validation error adding file {filename_path}: {response.text}")
+                return
+            elif response.status_code == 409:
+                 print(f"Conflict - file may already exist: {filename_path}")
+                 return
+            else:
+                print(f"Error adding file {filename_path} (attempt {attempt + 1}/{retries}): {response.status_code} - {response.text}")
+                time.sleep(2 ** attempt)
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed for {filename_path} (attempt {attempt + 1}/{retries}): {e}")
+            time.sleep(2 ** attempt)
+    print(f"Failed to add file {filename_path} after {retries} retries.")
+
+def _execute_update_file(filename_path, data, commit_message, retries=3):
+    url = f"{API_BASE}/{filename_path}"
+    message = commit_message or f"Update {filename_path}"
+
+    content, sha, error = get_file(filename_path)
+    if error:
+        print(f"Cannot update file - file not found or inaccessible: {error['message']}")
+        return
+
+    payload = {
+        "message": message,
+        "content": base64.b64encode(str(data).encode('utf-8')).decode('ascii'),
+        "sha": sha
+    }
+    
+    for attempt in range(retries):
+        try:
+            response = requests.put(url, headers=HEADERS, data=json.dumps(payload), timeout=30)
+            if response.status_code in [200, 201]:
+                print(f"Successfully updated file: {filename_path}")
+                return
+            elif response.status_code == 409: # SHA conflict
+                print(f"SHA conflict for {filename_path}. Retrying...")
+                new_content, new_sha, new_error = get_file(filename_path)
+                if new_error:
+                    print(f"SHA conflict and unable to retrieve updated SHA for {filename_path}")
+                    time.sleep(2 ** attempt)
+                    continue
+                payload["sha"] = new_sha
+                # We need to re-read the content and apply changes if necessary.
+                # This simple queue doesn't handle that. For now, we just retry with the new SHA.
+                time.sleep(2 ** attempt)
+                continue
+            else:
+                print(f"Error updating file {filename_path} (attempt {attempt + 1}/{retries}): {response.status_code} - {response.text}")
+                time.sleep(2 ** attempt)
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed for {filename_path} (attempt {attempt + 1}/{retries}): {e}")
+            time.sleep(2 ** attempt)
+    print(f"Failed to update file {filename_path} after {retries} retries.")
+
+
+# --- Public Write Functions (Add to Queue) ---
+def add_file(filename_path, data, commit_message=None):
+    if not filename_path or data is None:
+        return {"error": True, "message": "filename_path and data cannot be empty"}
+    write_queue.put((_execute_add_file, (filename_path, data, commit_message), {}))
+    return {"success": True, "message": "Add operation queued."}
+
+def update_file(filename_path, data, commit_message=None):
+    if not filename_path or data is None:
+        return {"error": True, "message": "filename_path and data cannot be empty"}
+    write_queue.put((_execute_update_file, (filename_path, data, commit_message), {}))
+    return {"success": True, "message": "Update operation queued."}
+
+def create_or_update_file(filename_path, data, commit_message=None):
+    # This function needs to decide whether to add or update.
+    # To avoid a race condition, we'll optimistically try to update,
+    # and if it fails because the file doesn't exist, we'll queue an add.
+    # A more robust solution might involve a specific "create_or_update" task in the worker.
+    
+    # For simplicity, we will read first, then queue the appropriate action.
+    # This is not perfectly race-proof but is better than nothing.
+    _content, _sha, error = get_file(filename_path)
+    if error and "not found" in error["message"].lower():
+        print(f"Queueing ADD for {filename_path}")
+        add_file(filename_path, data, commit_message)
+    elif not error:
+        print(f"Queueing UPDATE for {filename_path}")
+        update_file(filename_path, data, commit_message)
+    else:
+        # Some other error occurred during the read
+        print(f"Could not determine whether to add or update file {filename_path}: {error['message']}")
+        return {"error": True, "message": f"Could not queue operation: {error['message']}"}
+        
+    return {"success": True, "message": "Create/Update operation queued."}
 
 
 if __name__ == '__main__':
-    print(json.dumps(get_folder_contents('data/'), indent=4))
+    # Example Usage
+    print("Queueing file creation...")
+    create_or_update_file("test_queue.txt", "Hello from the queue!", "Test: Queueing")
+    
+    print("Waiting for queue to process...")
+    write_queue.join() # Wait for all items to be processed
+    print("Queue processing finished.")
+
+    print("\nReading file content:")
+    content, _, _ = get_file("test_queue.txt")
+    print(content)
