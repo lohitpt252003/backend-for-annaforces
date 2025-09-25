@@ -30,10 +30,11 @@ def update_user_profile(user_id, new_name, new_username, new_bio):
 
     # 2. Check for username uniqueness if it's being changed
     if new_username and new_username != current_meta_data.get('username'):
-        users_folders, error = get_folder_contents(GITHUB_USERS_BASE_PATH)
+        response, error = get_folder_contents(GITHUB_USERS_BASE_PATH)
         if error:
             return False, {"error": "Could not retrieve users list to check username uniqueness."}
 
+        users_folders = response.get("data", [])
         for item in users_folders:
             if item['type'] == 'dir' and item['name'].startswith('U') and item['name'] != user_id:
                 other_user_meta_path = f"{GITHUB_USERS_BASE_PATH}/{item['name']}/meta.json"
