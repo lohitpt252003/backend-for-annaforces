@@ -19,21 +19,20 @@ This directory contains various service modules used in the `backend-for-annafor
   - **Dependencies**: `firebase_admin`, `argon2`, `dotenv`, `json`, `os`.
 
 - `github_services.py`:
-  - **Description**: Provides an interface for interacting with the GitHub API to manage files and directories within a specified repository. It now supports fetching files larger than 1MB by using the `download_url` provided by the GitHub API.
+  - **Description**: Provides an interface for interacting with the GitHub API to manage files. To handle concurrency, it now includes an in-memory queue for all write operations (`add`, `update`), ensuring that file modifications are executed sequentially by a background worker thread. It also supports fetching files larger than 1MB by using the `download_url` provided by the GitHub API.
   - **Key Functions**:
-    - `get_github_config()`: Retrieves GitHub authentication details from environment variables.
-    - `get_file(filename_path)`: Fetches the content and SHA of a file, handling large files transparently.
-    - `add_file(filename_path, data, commit_message)`: Adds a new file to the repository.
-    - `update_file(filename_path, data, commit_message)`: Updates an existing file.
-    - `create_or_update_file(filename_path, data, commit_message)`: Adds a file if it doesn't exist, otherwise updates it.
-    - `get_folder_contents(path)`: Lists the contents of a folder in the repository.
-  - **Dependencies**: `requests`, `json`, `os`, `base64`, `time`, `dotenv`.
+    - `get_file(filename_path)`: Fetches the content and SHA of a file.
+    - `add_file(filename_path, data, commit_message)`: Queues an operation to add a new file.
+    - `update_file(filename_path, data, commit_message)`: Queues an operation to update an existing file.
+    - `create_or_update_file(filename_path, data, commit_message)`: Queues an operation to add or update a file.
+    - `get_folder_contents(path)`: Lists the contents of a folder.
+  - **Dependencies**: `requests`, `json`, `os`, `base64`, `time`, `dotenv`, `queue`, `threading`.
 
 - `judge_service.py`:
-  - **Description**: Manages the automated judging process for code submissions. It retrieves test cases from GitHub and sends the code to an external code execution server for judging. It then determines the submission's verdict based on the results from the execution server.
+  - **Description**: Manages the automated judging of code submissions. To support live feedback, the `grade_submission` function is now a generator that executes test cases one by one and yields the result of each, allowing for incremental status updates.
   - **Key Functions**:
-    - `get_testcases(problem_id)`: Fetches input and output test cases for a given problem from GitHub.
-    - `grade_submission(code, language, problem_id)`: Sends the provided code to an external server for execution against all test cases and returns detailed results, including status (e.g., accepted, wrong answer, time limit exceeded). If the execution server is not running, it returns an error message.
+    - `get_testcases(problem_id)`: Fetches all test cases for a given problem.
+    - `grade_submission(code, language, problem_id)`: A generator function that runs code against each test case and yields the result.
   - **Dependencies**: `os`, `json`, `requests`, `services.github_services`.
 
 - `problem_service.py`:
@@ -45,10 +44,10 @@ This directory contains various service modules used in the `backend-for-annafor
   - **Dependencies**: `json`, `re`, `services.github_services`, `config.github_config`.
 
 - `submission_service.py`:
-  - **Description**: Manages the lifecycle of user code submissions, from creation to grading and recording.
+  - **Description**: Manages the lifecycle of user code submissions using an asynchronous, live-updating approach. It immediately queues a submission for processing and returns a submission ID. A background thread then handles the judging process, updating the submission status on GitHub after each test case is executed.
   - **Key Functions**:
-    - `handle_new_submission(problem_id, user_id, language, code)`: Processes a new submission, generates a submission ID, stores code and metadata, triggers grading, and updates relevant problem and user records.
-  - **Dependencies**: `os`, `time`, `json`, `sys`, `services.github_services`, `services.judge_service`, `config.github_config`.
+    - `handle_new_submission(problem_id, user_id, language, code)`: Creates initial submission files, queues the submission for judging in a background thread, and returns an immediate response.
+  - **Dependencies**: `os`, `time`, `json`, `threading`, `services.github_services`, `services.judge_service`, `config.github_config`.
 
 - `user_service.py`:
   - **Description**: Provides functionalities for retrieving user-specific data and submission history.

@@ -37,12 +37,20 @@ HEADERS = {
 
 # --- In-Memory Queue for Write Operations ---
 write_queue = queue.Queue()
+MAX_RETRIES = 5
 
 def _worker():
     while True:
         try:
-            func, args, kwargs = write_queue.get()
-            func(*args, **kwargs)
+            func, args, kwargs, retries = write_queue.get()
+            success = func(*args, **kwargs)
+            if not success and retries < MAX_RETRIES:
+                retry_delay = 2 ** retries
+                print(f"Operation failed. Retrying in {retry_delay} seconds... (Attempt {retries + 1}/{MAX_RETRIES})")
+                time.sleep(retry_delay)
+                write_queue.put((func, args, kwargs, retries + 1))
+            elif not success:
+                print(f"Operation failed after {MAX_RETRIES} retries. Giving up.")
             write_queue.task_done()
         except Exception as e:
             print(f"Error in worker thread: {e}")
@@ -106,7 +114,7 @@ def get_folder_contents(path):
         return {"success": False, "error": f"Request failed: {e}"}, None
 
 # --- Internal Write Operations (Executed by Worker) ---
-def _execute_add_file(filename_path, data, commit_message, retries=3):
+def _execute_add_file(filename_path, data, commit_message):
     url = f"{API_BASE}/{filename_path}"
     message = commit_message or f"Add {filename_path}"
     payload = {
@@ -114,34 +122,26 @@ def _execute_add_file(filename_path, data, commit_message, retries=3):
         "content": base64.b64encode(str(data).encode('utf-8')).decode('ascii')
     }
 
-    for attempt in range(retries):
-        try:
-            response = requests.put(url, headers=HEADERS, data=json.dumps(payload), timeout=30)
-            if response.status_code in [200, 201]:
-                print(f"Successfully added file: {filename_path}")
-                return
-            elif response.status_code == 422:
-                print(f"Validation error adding file {filename_path}: {response.text}")
-                return
-            elif response.status_code == 409:
-                 print(f"Conflict - file may already exist: {filename_path}")
-                 return
-            else:
-                print(f"Error adding file {filename_path} (attempt {attempt + 1}/{retries}): {response.status_code} - {response.text}")
-                time.sleep(2 ** attempt)
-        except requests.exceptions.RequestException as e:
-            print(f"Request failed for {filename_path} (attempt {attempt + 1}/{retries}): {e}")
-            time.sleep(2 ** attempt)
-    print(f"Failed to add file {filename_path} after {retries} retries.")
+    try:
+        response = requests.put(url, headers=HEADERS, data=json.dumps(payload), timeout=30)
+        if response.status_code in [200, 201]:
+            print(f"Successfully added file: {filename_path}")
+            return True
+        else:
+            print(f"Error adding file {filename_path}: {response.status_code} - {response.text}")
+            return False
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed for {filename_path}: {e}")
+        return False
 
-def _execute_update_file(filename_path, data, commit_message, retries=3):
+def _execute_update_file(filename_path, data, commit_message):
     url = f"{API_BASE}/{filename_path}"
     message = commit_message or f"Update {filename_path}"
 
     content, sha, error = get_file(filename_path)
     if error:
         print(f"Cannot update file - file not found or inaccessible: {error['message']}")
-        return
+        return False
 
     payload = {
         "message": message,
@@ -149,54 +149,36 @@ def _execute_update_file(filename_path, data, commit_message, retries=3):
         "sha": sha
     }
     
-    for attempt in range(retries):
-        try:
-            response = requests.put(url, headers=HEADERS, data=json.dumps(payload), timeout=30)
-            if response.status_code in [200, 201]:
-                print(f"Successfully updated file: {filename_path}")
-                return
-            elif response.status_code == 409: # SHA conflict
-                print(f"SHA conflict for {filename_path}. Retrying...")
-                new_content, new_sha, new_error = get_file(filename_path)
-                if new_error:
-                    print(f"SHA conflict and unable to retrieve updated SHA for {filename_path}")
-                    time.sleep(2 ** attempt)
-                    continue
-                payload["sha"] = new_sha
-                # We need to re-read the content and apply changes if necessary.
-                # This simple queue doesn't handle that. For now, we just retry with the new SHA.
-                time.sleep(2 ** attempt)
-                continue
-            else:
-                print(f"Error updating file {filename_path} (attempt {attempt + 1}/{retries}): {response.status_code} - {response.text}")
-                time.sleep(2 ** attempt)
-        except requests.exceptions.RequestException as e:
-            print(f"Request failed for {filename_path} (attempt {attempt + 1}/{retries}): {e}")
-            time.sleep(2 ** attempt)
-    print(f"Failed to update file {filename_path} after {retries} retries.")
+    try:
+        response = requests.put(url, headers=HEADERS, data=json.dumps(payload), timeout=30)
+        if response.status_code in [200, 201]:
+            print(f"Successfully updated file: {filename_path}")
+            return True
+        elif response.status_code == 409: # SHA conflict
+            print(f"SHA conflict for {filename_path}. The operation will be retried by the worker.")
+            return False # Let the worker re-queue this
+        else:
+            print(f"Error updating file {filename_path}: {response.status_code} - {response.text}")
+            return False
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed for {filename_path}: {e}")
+        return False
 
 
 # --- Public Write Functions (Add to Queue) ---
 def add_file(filename_path, data, commit_message=None):
     if not filename_path or data is None:
         return {"error": True, "message": "filename_path and data cannot be empty"}
-    write_queue.put((_execute_add_file, (filename_path, data, commit_message), {}))
+    write_queue.put((_execute_add_file, (filename_path, data, commit_message), {}, 0))
     return {"success": True, "message": "Add operation queued."}
 
 def update_file(filename_path, data, commit_message=None):
     if not filename_path or data is None:
         return {"error": True, "message": "filename_path and data cannot be empty"}
-    write_queue.put((_execute_update_file, (filename_path, data, commit_message), {}))
+    write_queue.put((_execute_update_file, (filename_path, data, commit_message), {}, 0))
     return {"success": True, "message": "Update operation queued."}
 
 def create_or_update_file(filename_path, data, commit_message=None):
-    # This function needs to decide whether to add or update.
-    # To avoid a race condition, we'll optimistically try to update,
-    # and if it fails because the file doesn't exist, we'll queue an add.
-    # A more robust solution might involve a specific "create_or_update" task in the worker.
-    
-    # For simplicity, we will read first, then queue the appropriate action.
-    # This is not perfectly race-proof but is better than nothing.
     _content, _sha, error = get_file(filename_path)
     if error and "not found" in error["message"].lower():
         print(f"Queueing ADD for {filename_path}")
@@ -205,7 +187,6 @@ def create_or_update_file(filename_path, data, commit_message=None):
         print(f"Queueing UPDATE for {filename_path}")
         update_file(filename_path, data, commit_message)
     else:
-        # Some other error occurred during the read
         print(f"Could not determine whether to add or update file {filename_path}: {error['message']}")
         return {"error": True, "message": f"Could not queue operation: {error['message']}"}
         
@@ -215,7 +196,7 @@ def create_or_update_file(filename_path, data, commit_message=None):
 if __name__ == '__main__':
     # Example Usage
     print("Queueing file creation...")
-    create_or_update_file("test_queue.txt", "Hello from the queue!", "Test: Queueing")
+    create_or_update_file("test_queue.txt", "Hello from the resilient queue!", "Test: Resilient Queueing")
     
     print("Waiting for queue to process...")
     write_queue.join() # Wait for all items to be processed

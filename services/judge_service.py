@@ -68,9 +68,30 @@ def get_testcases(problem_id):
 
     return testcases
 
+def _execute_testcase(code, language, stdin, time_limit_s, memory_limit_mb):
+    url = os.getenv('JUDGE_API_SERVER_URL')
+    payload = {
+        "language": language,
+        "code": code,
+        "stdin": stdin,
+        "timelimit": str(time_limit_s),
+        "memorylimit": str(memory_limit_mb)
+    }
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    try:
+        response = requests.post(url, data=json.dumps(payload), headers=headers)
+        response.raise_for_status()
+        return response.json(), None
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling execution server: {e}")
+        return None, {"overall_status": "error", "message": "Code execution server is not running. Please contact the admin."}
+
 def grade_submission(code, language, problem_id):
     """
     Grades a submission by running it against all test cases for a given problem.
+    This function is a generator that yields the result of each test case.
     """
 
     # Get problem metadata for time and memory limits
@@ -78,14 +99,16 @@ def grade_submission(code, language, problem_id):
     problem_meta_content, _, problem_meta_error = get_file(problem_meta_path)
 
     if problem_meta_error:
-        return {"overall_status": "error", "message": f"Failed to get problem metadata: {problem_meta_error['message']}"}
+        yield {"overall_status": "error", "message": f"Failed to get problem metadata: {problem_meta_error['message']}"}
+        return
 
     try:
         problem_meta_data = json.loads(problem_meta_content)
         time_limit_ms = problem_meta_data.get("timeLimit", 2000) # Default to 2000ms
         memory_limit_mb = problem_meta_data.get("memoryLimit", 256) # Default to 256MB
     except json.JSONDecodeError:
-        return {"overall_status": "error", "message": "Failed to decode problem meta.json"}
+        yield {"overall_status": "error", "message": "Failed to decode problem meta.json"}
+        return
 
     # Convert time limit from milliseconds to seconds for the judge service
     time_limit_s = max(1, time_limit_ms // 1000) # Ensure at least 1 second
@@ -94,35 +117,19 @@ def grade_submission(code, language, problem_id):
     testcases = get_testcases(problem_id)
     
     if not testcases:
-        return {"overall_status": "error", "message": "No test cases found for this problem."}
-
-    results = []
-    verdicts = []
+        yield {"overall_status": "error", "message": "No test cases found for this problem."}
+        return
 
     for i, testcase in enumerate(testcases):
         print(SIZE * '=' + f' Running testcase {i + 1}! ' + '=' * SIZE)
         stdin = testcase.get('stdin', '')
         expected_stdout = testcase.get('stdout', '')
         
-        url = os.getenv('JUDGE_API_SERVER_URL')
-        payload = {
-            "language": language,
-            "code": code,
-            "stdin": stdin,
-            "timelimit": str(time_limit_s),
-            "memorylimit": str(memory_limit_mb)
-        }
-        headers = {
-            'Content-Type': 'application/json'
-        }
-        try:
-            response = requests.post(url, data=json.dumps(payload), headers=headers)
-            response.raise_for_status()
-            result = response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"Error calling execution server: {e}")
-            return {"overall_status": "error", "message": "Code execution server is not running. Please contact the admin."}
-        
+        result, error = _execute_testcase(code, language, stdin, time_limit_s, memory_limit_mb)
+        if error:
+            yield error
+            return
+
         print(result)
 
         stdout = result.get('stdout', '')
@@ -150,10 +157,8 @@ def grade_submission(code, language, problem_id):
         elif stdout.strip() != expected_stdout.strip():
             test_status = "wrong_answer"
             message = "Output mismatch"
-        print()
-        verdicts.append(test_status)
-
-        results.append({
+        
+        yield {
             "test_case_number": i + 1,
             "status": test_status,
             "message": message,
@@ -162,22 +167,4 @@ def grade_submission(code, language, problem_id):
             "actual_output": stdout.strip(),
             "expected_output": expected_stdout,
             "input": stdin
-        })
-
-    # Determine overall status based on the verdicts
-    overall_status = "accepted"
-    if "compilation_error" in verdicts:
-        overall_status = "compilation_error"
-    elif "runtime_error" in verdicts:
-        overall_status = "runtime_error"
-    elif "time_limit_exceeded" in verdicts:
-        overall_status = "time_limit_exceeded"
-    elif "memory_limit_exceeded" in verdicts:
-        overall_status = "memory_limit_exceeded"
-    elif "wrong_answer" in verdicts:
-        overall_status = "wrong_answer"
-
-    return {
-        "overall_status": overall_status,
-        "test_results": results
-    }
+        }

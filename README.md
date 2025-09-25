@@ -12,6 +12,8 @@ The backend is deployed at: `http://localhost:5000/`
 
 The `services/github_services.py` file provides a set of functions to interact with a GitHub repository. This service is used to manage the data stored in the `DATA` repository.
 
+**Write Operation Queue:** To prevent race conditions and data corruption from concurrent writes, all file creation and update operations are funneled through a simple in-memory queue. A dedicated background thread processes this queue, ensuring that all write operations to the GitHub repository are executed sequentially. This makes the system more robust in a single-instance deployment.
+
 ### OTP and Email Service
 
 The `services/email_service.py` module handles OTP generation and sending via email using Flask-Mail. This is primarily used for user email verification during registration, sending welcome emails, user ID reminders, and password reset OTPs.
@@ -43,22 +45,24 @@ To use the Firebase service, you need to set the following environment variable 
 
 ### Submission Service
 
-The `services/submission_service.py` handles the submission of solutions by users. It orchestrates the process of receiving a submission, saving it, judging it, and updating the relevant data.
+The `services/submission_service.py` handles the submission of solutions by users. It now features a fully asynchronous, live-updating process.
 
-#### Submission Flow
+#### Live Submission Flow
 
-When a user submits a solution, the following steps are performed:
+When a user submits a solution, the system provides real-time feedback as the submission is processed:
 
-1.  A new submission ID is generated.
-2.  The submission metadata and code are saved to the `DATA` repository.
-3.  The submission is graded by the Judge Service.
-4.  The submission status is updated with the judging result.
-5.  The `number_of_submissions` is incremented in the corresponding user's and problem's `meta.json` files.
-6.  All file operations are committed with a commit message prefixed with `[AUTO]`.
+1.  **Immediate Response:** The API immediately creates the submission files with a **"Queued"** status and returns a `submission_id` to the user.
+2.  **Background Processing:** The entire judging process is handled in a background thread, making the user interface feel much more responsive.
+3.  **Live Status Updates:**
+    *   The submission status is first set to **"Running... (Testcase X)"** as each test case is executed.
+    *   After every single test case, the submission's `meta.json` file on GitHub is updated with the latest results.
+    *   Once all test cases are complete, the final verdict (e.g., "Accepted", "Wrong Answer") is calculated and all relevant files (submission metadata, user statistics, problem statistics) are updated on GitHub.
+
+This architecture allows the frontend to poll the submission endpoint and display live updates to the user.
 
 ### Judge Service
 
-The `services/judge_service.py` is responsible for evaluating submitted code. It uses a Docker container to create a sandboxed environment for code execution. It retrieves test cases from the `DATA` repository and runs the user's code against them, checking for correctness and resource limits (time and memory).
+The `services/judge_service.py` is responsible for evaluating submitted code. To support the live submission flow, the `grade_submission` function has been re-architected as a **generator**. Instead of executing all test cases and returning a final result, it now executes test cases one by one and **yields** the result of each test case as it completes. This allows the `SubmissionService` to process and report results incrementally.
 
 ### Problem Service
 
