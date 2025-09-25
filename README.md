@@ -2,6 +2,10 @@
 
 This is the backend for the Annaforces project.
 
+## Data Structure
+
+For a detailed understanding of how problems, submissions, users, and solutions are structured and stored, please refer to the [DATA/README.md](../DATA/README.md) file.
+
 ## Deployment
 
 The backend is deployed at: `http://localhost:5000/`
