@@ -664,6 +664,44 @@ Possible error messages:
 ```
 
 
+## Users API
+
+**Endpoint:** `/api/users/<user_id>/username`
+
+**Method:** `GET`
+
+**Description:** Retrieves the username for a specific user ID. Requires a valid JWT in the Authorization header.
+
+**URL Parameters:**
+
+- `user_id`: The ID of the user to retrieve the username for.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "username": "testuser"
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized, 404 Not Found, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
 ## Auth API
 
 **Endpoint:** `/api/auth/login`

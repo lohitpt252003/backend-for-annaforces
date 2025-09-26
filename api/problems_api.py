@@ -281,6 +281,8 @@ def get_problem_submissions(current_user, problem_id):
     response, error = get_folder_contents(submissions_path)
 
     if not response.get("success"):
+        if "404" in response.get("error", "") or "not found" in response.get("error", "").lower():
+            return jsonify({'submissions': [], 'total_submissions': 0}), 200
         return jsonify({"error": response.get("error", "Failed to get submissions")}), 500
 
     all_submissions = []

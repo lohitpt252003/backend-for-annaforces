@@ -100,6 +100,8 @@ These measures contribute to a more robust and secure application.
 
 ## Recent Bug Fixes
 
+- **Problems API:**
+  - Fixed a bug in the `/api/problems/<problem_id>/submissions` endpoint that caused a 500 error when a problem had no submissions. The endpoint now correctly returns an empty list.
 - **GitHub Service:**
   - Fixed an issue where files larger than 1MB could not be fetched from GitHub. The service now uses the `download_url` for large files.
 - **Submission Service:**
@@ -455,6 +457,44 @@ If these flags are true, you can use the following endpoints to retrieve the PDF
 **Error Response:**
 
 - **Code:** 401 Unauthorized (if token is missing or invalid), 400 Bad Request (if user_id format is invalid), 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### Users API
+
+**Endpoint:** `/api/users/<user_id>/username`
+
+**Method:** `GET`
+
+**Description:** Retrieves the username for a specific user ID. Requires a valid JWT in the Authorization header.
+
+**URL Parameters:**
+
+- `user_id`: The ID of the user to retrieve the username for.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "username": "testuser"
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized, 404 Not Found, 500 Internal Server Error
 - **Content:**
 
 ```json

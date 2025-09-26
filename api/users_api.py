@@ -69,6 +69,23 @@ def get_solved_problems(current_user, user_id):
 
     return jsonify(solved_problems), 200
 
+@users_bp.route('/<user_id>/username', methods=['GET'])
+@token_required
+def get_username_by_id(current_user, user_id):
+    # Validate user_id to prevent path traversal
+    if not user_id.startswith('U') or not user_id[1:].isdigit():
+        return jsonify({"error": "Invalid user ID format"}), 400
+
+    user, error = get_user_by_id_service(user_id)
+
+    if error:
+        return jsonify({"error": error["error"]}), 500
+
+    if user and "username" in user:
+        return jsonify({"username": user["username"]}), 200
+    else:
+        return jsonify({"error": "Username not found for the given user ID"}), 404
+
 @users_bp.route('/<user_id>/update-profile', methods=['PUT'])
 @token_required
 def update_user_profile(current_user, user_id):
