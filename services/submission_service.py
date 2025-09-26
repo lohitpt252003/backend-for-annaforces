@@ -2,6 +2,7 @@ import os, time, json, threading
 
 from services.github_services import get_file, add_file, update_file, create_or_update_file
 from services.judge_service import grade_submission
+from services.user_service import update_user_problem_status
 from config.github_config import GITHUB_PROBLEMS_BASE_PATH, GITHUB_USERS_BASE_PATH, GITHUB_SUBMISSIONS_BASE_PATH
 
 def _process_submission_in_background(new_submission_id, problem_id, user_id, language, code):
@@ -48,6 +49,12 @@ def _process_submission_in_background(new_submission_id, problem_id, user_id, la
 
     submission_meta_data["status"] = overall_status
     update_file(submission_meta_path, json.dumps(submission_meta_data, indent=2), f"[AUTO] Final status for {new_submission_id}: {overall_status}")
+
+    # Update user's problem status
+    user_problem_new_status = "solved" if overall_status == "accepted" else "not_solved"
+    success, update_error = update_user_problem_status(user_id, problem_id, user_problem_new_status)
+    if update_error:
+        print(f"Error updating user problem status for {user_id} and {problem_id}: {update_error['error']}")
 
     # 4. Update Problem Data
     problem_submission_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/submissions/{new_submission_id}.json"

@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from services.github_services import get_file, create_or_update_file, get_folder_contents
 from config.github_config import GITHUB_USERS_BASE_PATH, GITHUB_SUBMISSIONS_BASE_PATH
 
@@ -104,6 +105,10 @@ def get_user_by_id(user_id):
 
     try:
         meta_data = json.loads(meta_content)
+        # Initialize new fields if they don't exist
+        meta_data.setdefault('attempted', {})
+        meta_data.setdefault('solved', {})
+        meta_data.setdefault('not_solved', {})
         return meta_data, None
     except json.JSONDecodeError:
         return None, {"error": "Failed to decode meta.json"}
@@ -154,3 +159,53 @@ def get_solved_problems(user_id):
             solved_problem_ids.add(submission.get("problem_id"))
 
     return list(solved_problem_ids), None
+
+def update_user_problem_status(user_id, problem_id, new_status):
+    meta_path = f"{GITHUB_USERS_BASE_PATH}/{user_id}/meta.json"
+    meta_content, meta_sha, meta_error = get_file(meta_path)
+
+    if meta_error:
+        print(f"Error fetching user meta.json for {user_id}: {meta_error['message']}")
+        return False, {"error": f"Could not fetch user metadata: {meta_error['message']}"}
+
+    try:
+        meta_data = json.loads(meta_content)
+    except json.JSONDecodeError:
+        print(f"Error decoding user meta.json for {user_id}")
+        return False, {"error": "Failed to decode user metadata."}
+
+    # Ensure the fields exist and are dictionaries
+    meta_data.setdefault('attempted', {})
+    meta_data.setdefault('solved', {})
+    meta_data.setdefault('not_solved', {})
+
+    # Check if the problem was already solved
+    was_solved = problem_id in meta_data['solved']
+
+    # Remove problem_id from attempted and not_solved if it exists there
+    # This ensures it's only in one category at a time, unless it's already solved.
+    meta_data['attempted'].pop(problem_id, None)
+    meta_data['not_solved'].pop(problem_id, None)
+
+    # Add problem_id to the appropriate category with current timestamp
+    timestamp = datetime.now().isoformat()
+
+    if new_status == "solved":
+        meta_data['solved'][problem_id] = timestamp
+    elif not was_solved: # Only update if it wasn't already solved
+        meta_data['not_solved'][problem_id] = timestamp
+    
+    # The 'attempted' status is implicitly covered by being in either 'solved' or 'not_solved'.
+    # We don't need a separate explicit 'attempted' list for this logic.
+
+    update_meta_result = create_or_update_file(
+        meta_path,
+        json.dumps(meta_data, indent=2),
+        f"[AUTO] Update problem status for user {user_id} and problem {problem_id}"
+    )
+
+    if "error" in update_meta_result:
+        print(f"Error updating user problem status for {user_id}: {update_meta_result['message']}")
+        return False, {"error": f"Failed to update user problem status: {update_meta_result['message']}"}
+
+    return True, None

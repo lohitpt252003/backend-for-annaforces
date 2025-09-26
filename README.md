@@ -94,7 +94,7 @@ Recent updates have focused on improving the security posture of the backend. Ke
 -   **Email Enumeration Prevention:** The `/api/auth/forgot-userid` endpoint now returns a generic success message, regardless of whether the email exists, to prevent attackers from enumerating valid user email addresses.
 -   **Import Fixes:** Resolved import issues for email service functions (`send_password_reset_email`, `send_password_changed_confirmation_email`) ensuring proper functionality of password reset and confirmation emails.
 
--   **Authorization Policy Update:** The `/api/users/<user_id>` endpoint now allows any authenticated user to view the profile details of any other user, aligning with the updated requirement for public profile viewing.
+-   **User Problem Status Tracking:** User `meta.json` files now include `attempted`, `solved`, and `not_solved` fields (stored as dictionaries for O(1) access). These fields are dynamically updated by `submission_service.py` and managed by `user_service.py` based on the outcome of each submission, providing a comprehensive history of a user's engagement with problems.
 
 These measures contribute to a more robust and secure application.
 
