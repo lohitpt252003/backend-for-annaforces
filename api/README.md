@@ -702,6 +702,46 @@ Possible error messages:
 }
 ```
 
+## Users API
+
+**Endpoint:** `/api/users/<user_id>/problem-status`
+
+**Method:** `GET`
+
+**Description:** Retrieves the status of problems (solved, not_solved, not_attempted) for a specific user. Requires a valid JWT in the Authorization header.
+
+**URL Parameters:**
+
+- `user_id`: The ID of the user to retrieve problem statuses for.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "P1": "solved",
+  "P2": "not_solved",
+  "P3": "not_attempted"
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized, 404 Not Found, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
 ## Auth API
 
 **Endpoint:** `/api/auth/login`

@@ -112,3 +112,34 @@ def update_user_profile(current_user, user_id):
         return jsonify({"error": error["error"]}), 500
 
     return jsonify({"message": "Profile updated successfully"}), 200
+
+@users_bp.route('/<user_id>/problem-status', methods=['GET'])
+@token_required
+def get_user_problem_status(current_user, user_id):
+    # Validate user_id to prevent path traversal
+    if not user_id.startswith('U') or not user_id[1:].isdigit():
+        return jsonify({"error": "Invalid user ID format"}), 400
+
+    # Authorization: Any authenticated user can view any other user's problem status
+
+    user_meta, error = get_user_by_id_service(user_id)
+
+    if error:
+        return jsonify({"error": error["error"]}), 500
+
+    problem_statuses = {}
+    # Combine all problems from solved, not_solved, and attempted
+    all_problem_ids = set()
+    all_problem_ids.update(user_meta.get('solved', {}).keys())
+    all_problem_ids.update(user_meta.get('not_solved', {}).keys())
+    all_problem_ids.update(user_meta.get('attempted', {}).keys())
+
+    for problem_id in all_problem_ids:
+        if problem_id in user_meta.get('solved', {}):
+            problem_statuses[problem_id] = "solved"
+        elif problem_id in user_meta.get('not_solved', {}):
+            problem_statuses[problem_id] = "not_solved"
+        else:
+            problem_statuses[problem_id] = "not_attempted" # Should not happen if logic is correct, but as a fallback
+
+    return jsonify(problem_statuses), 200
