@@ -98,7 +98,7 @@ Possible error messages:
 
 **Method:** `GET`
 
-**Description:** Retrieves the solution code and explanation for a specific problem. Requires a valid JWT in the Authorization header.
+**Description:** Retrieves the solution for a specific problem. The response format depends on whether the problem belongs to a running or scheduled contest.
 
 **Authorization Header:**
 
@@ -111,17 +111,30 @@ Possible error messages:
 **Success Response:**
 
 - **Code:** 200 OK
-- **Content:**
 
-```json
-{
-  "python": "<python solution code>",
-  "cpp": "<cpp solution code>",
-  "c": "<c solution code>",
-  "markdown": "<solution explanation in markdown>",
-  "has_pdf_solution": true
-}
-```
+- **If the solution is available:**
+  - **Content:**
+    ```json
+    {
+        "status": "available",
+        "data": {
+            "python": "<python solution code>",
+            "cpp": "<cpp solution code>",
+            "c": "<c solution code>",
+            "markdown": "<solution explanation in markdown>",
+            "has_pdf_solution": true
+        }
+    }
+    ```
+
+- **If the solution is not available (due to an ongoing or scheduled contest):**
+  - **Content:**
+    ```json
+    {
+        "status": "not_available",
+        "message": "Solutions are not available for problems in a running or scheduled contest."
+    }
+    ```
 
 **Error Response:**
 
@@ -376,15 +389,15 @@ Possible error messages:
 
 **Method:** `GET`
 
-**Description:** Retrieves detailed information about a specific submission, including code, status, and test case results. Requires a valid JWT in the Authorization header.
-
-**URL Parameters:**
-
-- `submission_id`: The ID of the submission to retrieve.
+**Description:** Retrieves detailed information about a specific submission. Access to submissions for problems in running contests is restricted.
 
 **Authorization Header:**
 
 `Authorization: Bearer <your_jwt_token>`
+
+**URL Parameters:**
+
+- `submission_id`: The ID of the submission to retrieve.
 
 **Success Response:**
 
@@ -413,7 +426,53 @@ Possible error messages:
 
 **Error Response:**
 
-- **Code:** 401 Unauthorized, 404 Not Found, 500 Internal Server Error
+- **Code:** 401 Unauthorized, 403 Forbidden, 404 Not Found, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+- **If the submission belongs to a running contest and the user is not the owner:**
+  - **Code:** 403 Forbidden
+  - **Content:**
+    ```json
+    {
+      "error": "You are not allowed to see the submission of the other user during the contest."
+    }
+    ```
+
+### Contests API
+
+**Endpoint:** `/api/contests/<contest_id>/is-registered`
+
+**Method:** `GET`
+
+**Description:** Checks if the authenticated user is registered for a specific contest. Requires a valid JWT in the Authorization header.
+
+**URL Parameters:**
+
+- `contest_id`: The ID of the contest to check registration for.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "is_registered": true
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized, 500 Internal Server Error
 - **Content:**
 
 ```json
@@ -422,7 +481,99 @@ Possible error messages:
 }
 ```
 
-## Contests API
+**Endpoint:** `/api/contests/<contest_id>/register`
+
+**Method:** `POST`
+
+**Description:** Registers the authenticated user for a specific contest. Requires a valid JWT in the Authorization header.
+
+**URL Parameters:**
+
+- `contest_id`: The ID of the contest to register for.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "message": "Successfully registered for the contest."
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+**Endpoint:** `/api/contests/<contest_id>/leaderboard`
+
+**Method:** `GET`
+
+**Description:** Retrieves the leaderboard for a specific contest, now including usernames.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**URL Parameters:**
+
+- `contest_id`: The ID of the contest to retrieve the leaderboard for.
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "last_updated": "2025-10-01T12:30:00Z",
+  "standings": [
+    {
+      "user_id": "U1",
+      "username": "boss",
+      "total_score": 200,
+      "total_penalty": 10,
+      "problems": {
+        "P1": {
+          "status": "solved",
+          "score": 100,
+          "attempts": 1,
+          "time_taken": "00:15:00"
+        },
+        "P2": {
+          "status": "not_solved",
+          "score": 0,
+          "attempts": 2,
+          "time_taken": "00:30:00"
+        }
+      }
+    }
+  ]
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
 
 **Endpoint:** `/api/contests`
 
@@ -473,7 +624,7 @@ Possible error messages:
 
 **Method:** `GET`
 
-**Description:** Retrieves detailed information about a specific contest, including its metadata, description, and theoretical background.
+**Description:** Retrieves detailed information about a specific contest. The response format depends on the contest's status.
 
 **URL Parameters:**
 
@@ -482,21 +633,34 @@ Possible error messages:
 **Success Response:**
 
 - **Code:** 200 OK
-- **Content:**
 
-```json
-{
-    "id": "C1",
-    "name": "Genesis Contest",
-    "description": "The first-ever contest on AnnaForces.",
-    "problems": ["P1", "P2", "P6"],
-    "startTime": "2025-10-01T00:00:00Z",
-    "endTime": "2025-10-07T23:59:59Z",
-    "authors": ["Gemini"],
-    "contest_description": "# Genesis Contest\n\nThis is the inaugural contest for AnnaForces. It features a selection of introductory problems designed to test fundamental programming skills.\n\n## Rules\n\n*   Participants must submit solutions in C, C++, or Python.\n*   Solutions will be judged based on correctness, time efficiency, and memory usage.\n*   Standard competitive programming rules apply.\n\nGood luck to all participants!",
-    "contest_theory": "# Theory Behind the Genesis Contest\n\nThe problems in this contest are designed to cover basic algorithmic concepts such as:\n\n*   **Input/Output Handling:** Reading data from standard input and writing to standard output.\n*   **Conditional Statements:** Using `if-else` structures to make decisions.\n*   **Basic Arithmetic:** Performing addition, subtraction, multiplication, and division.\n*   **Finding Maximum/Minimum:** Identifying the largest or smallest among a set of numbers.\n\nThese fundamental concepts are crucial for building more complex algorithms and solving advanced problems in competitive programming."
-}
-```
+- **If the contest has started:**
+  - **Content:**
+    ```json
+    {
+        "status": "started",
+        "data": {
+            "id": "C1",
+            "name": "Genesis Contest",
+            "description": "The first-ever contest on AnnaForces.",
+            "problems": ["P1", "P2", "P6"],
+            "startTime": "2025-10-01T00:00:00Z",
+            "endTime": "2025-10-07T23:59:59Z",
+            "authors": ["Gemini"],
+            "contest_description": "# Genesis Contest\n\nThis is the inaugural contest for AnnaForces...",
+            "contest_theory": "# Theory Behind the Genesis Contest\n\nThe problems in this contest are..."
+        }
+    }
+    ```
+
+- **If the contest has not started:**
+  - **Content:**
+    ```json
+    {
+        "status": "not_started",
+        "message": "The contest has not begun yet"
+    }
+    ```
 
 **Error Response:**
 
@@ -742,7 +906,44 @@ Possible error messages:
 }
 ```
 
-## Auth API
+## Users API
+
+**Endpoint:** `/api/users/<user_id>/contests`
+
+**Method:** `GET`
+
+**Description:** Retrieves a list of contest IDs that the specified user has registered for. Requires a valid JWT in the Authorization header.
+
+**URL Parameters:**
+
+- `user_id`: The ID of the user to retrieve contest participation for.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+[
+  "C1",
+  "C2"
+]
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
 
 **Endpoint:** `/api/auth/login`
 

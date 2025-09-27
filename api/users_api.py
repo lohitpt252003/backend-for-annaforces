@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 import json
 
 from services.user_service import get_user_by_id as get_user_by_id_service, get_user_submissions as get_user_submissions_service, update_user_profile as update_user_profile_service, get_solved_problems as get_solved_problems_service
+from services import contest_service
 from services.github_services import get_file
 from config.github_config import GITHUB_USERS_BASE_PATH
 from api.problems_api import token_required
@@ -143,3 +144,28 @@ def get_user_problem_status(current_user, user_id):
             problem_statuses[problem_id] = "not_attempted" # Should not happen if logic is correct, but as a fallback
 
     return jsonify(problem_statuses), 200
+
+@users_bp.route('/<user_id>/contests', methods=['GET'])
+@token_required
+def get_user_contests(current_user, user_id):
+    # Validate user_id to prevent path traversal
+    if not user_id.startswith('U') or not user_id[1:].isdigit():
+        return jsonify({"error": "Invalid user ID format"}), 400
+
+    # Authorization: Any authenticated user can view any other user's contest participation
+
+    contests_participated = []
+    all_contests, error = contest_service.get_all_contests_metadata()
+
+    if error:
+        return jsonify({"error": error["error"]}), 500
+
+    for contest in all_contests:
+        is_registered, reg_error = contest_service.is_user_registered(contest['id'], user_id)
+        if reg_error:
+            print(f"Error checking registration for contest {contest['id']}: {reg_error['error']}")
+            continue
+        if is_registered:
+            contests_participated.append(contest['id'])
+
+    return jsonify(contests_participated), 200

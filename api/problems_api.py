@@ -5,11 +5,13 @@ import os
 import json
 import time
 import requests
-
+from datetime import datetime
+import pytz
 
 from services.github_services import get_file, get_folder_contents, create_or_update_file
 from services.submission_service import handle_new_submission
 from services.problem_service import add_problem as add_problem_service
+from services import contest_service
 from config.github_config import GITHUB_PROBLEMS_BASE_PATH, GITHUB_USERS_BASE_PATH
 from utils.jwt_token import validate_token
 from functools import wraps
@@ -125,6 +127,19 @@ def get_problem_by_id(current_user, problem_id):
         meta_data['tags'] = problem_info_from_index.get('tags', [])
         meta_data['authors'] = problem_info_from_index.get('authors', [])
         meta_data['difficulty'] = problem_info_from_index.get('difficulty')
+
+        # Check if problem belongs to an upcoming contest
+        contest_id = meta_data.get('contest_id')
+        if contest_id:
+            contest_details, contest_details_error = contest_service.get_contest_details(contest_id)
+            if not contest_details_error and contest_details:
+                start_time = datetime.fromisoformat(contest_details['startTime'].replace('Z', '+00:00'))
+                current_time = datetime.now(pytz.UTC)
+
+                if current_time < start_time:
+                    contest_name = contest_details.get('name', 'Unnamed Contest')
+                    return jsonify({"status": "not_started", "message": f"The contest '{contest_name}' has not started yet and the problem won't be revealed now."}), 200
+
     except json.JSONDecodeError:
         return jsonify({"error": "Failed to decode JSON data"}), 500
 
@@ -180,7 +195,7 @@ def get_problem_by_id(current_user, problem_id):
                 "description": sample_description_content if not sample_description_error else ""
             })
 
-    response_data = {
+    problem_data = {
         "meta": meta_data,
         "header_content": header_content,
         "description_content": description_content,
@@ -195,14 +210,35 @@ def get_problem_by_id(current_user, problem_id):
     pdf_path = f"{problem_path}/problem.pdf"
     _, _, pdf_error = get_file(pdf_path)
     if not pdf_error:
-        response_data["has_pdf_statement"] = True
+        problem_data["has_pdf_statement"] = True
 
-    return jsonify(response_data), 200
+    return jsonify({"status": "started", "data": problem_data}), 200
 
 
 @problems_bp.route('/<problem_id>/solution', methods=['GET'])
 @token_required
 def get_problem_solution(current_user, problem_id):
+    # Check if problem belongs to a running or scheduled contest
+    problem_meta_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/meta.json"
+    problem_meta_content, _, problem_meta_error = get_file(problem_meta_path)
+
+    if not problem_meta_error:
+        try:
+            problem_meta_data = json.loads(problem_meta_content)
+            contest_id = problem_meta_data.get('contest_id')
+
+            if contest_id:
+                contest_details, contest_details_error = contest_service.get_contest_details(contest_id)
+
+                if not contest_details_error and contest_details:
+                    end_time = datetime.fromisoformat(contest_details['endTime'].replace('Z', '+00:00'))
+                    current_time = datetime.now(pytz.UTC)
+
+                    if current_time < end_time: # Contest is running or scheduled
+                        return jsonify({"status": "not_available", "message": "Solutions are not available for problems in a running or scheduled contest."}), 200
+        except json.JSONDecodeError:
+            pass # Ignore if problem meta is invalid
+
     solution_base_path = f"data/solutions/{problem_id}"
     
     solution_files = {
@@ -212,27 +248,27 @@ def get_problem_solution(current_user, problem_id):
         "markdown": f"{solution_base_path}/solution.md"
     }
 
-    response_data = {}
+    solution_data = {}
     for lang, path in solution_files.items():
         content, _, error = get_file(path)
         if error and "not found" in error["message"].lower():
-            response_data[lang] = None # File not found, set to None
+            solution_data[lang] = None # File not found, set to None
         elif error:
             return jsonify({"error": f"Error fetching {lang} solution: {error['message']}"}), 500
         else:
-            response_data[lang] = content
+            solution_data[lang] = content
 
     # Check if at least one solution file was found, otherwise problem_id might be invalid
-    if all(value is None for value in response_data.values()):
+    if all(value is None for value in solution_data.values()):
         return jsonify({"error": "Solution files not found for this problem_id"}), 404
 
-    response_data["has_pdf_solution"] = False
+    solution_data["has_pdf_solution"] = False
     pdf_path = f"{solution_base_path}/solution.pdf"
     _, _, pdf_error = get_file(pdf_path)
     if not pdf_error:
-        response_data["has_pdf_solution"] = True
+        solution_data["has_pdf_solution"] = True
 
-    return jsonify(response_data), 200
+    return jsonify({"status": "available", "data": solution_data}), 200
 
 @problems_bp.route('/<problem_id>/submit', methods=['POST'])
 @token_required
@@ -259,6 +295,34 @@ def submit_problem(current_user, problem_id):
     supported_languages = ["python", "c", "c++"]
     if not language or language.lower() not in supported_languages:
         return jsonify({"error": f"Unsupported language: {language}. Supported languages are {', '.join(supported_languages)}"}), 400
+
+    # Check if problem belongs to an active contest and if user is registered
+    problem_meta_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/meta.json"
+    problem_meta_content, _, problem_meta_error = get_file(problem_meta_path)
+
+    if not problem_meta_error:
+        try:
+            problem_meta_data = json.loads(problem_meta_content)
+            contest_id = problem_meta_data.get('contest_id')
+
+            if contest_id:
+                contest_details, contest_details_error = contest_service.get_contest_details(contest_id)
+
+                if not contest_details_error and contest_details:
+                    start_time = datetime.fromisoformat(contest_details['startTime'].replace('Z', '+00:00'))
+                    end_time = datetime.fromisoformat(contest_details['endTime'].replace('Z', '+00:00'))
+                    current_time = datetime.now(pytz.UTC)
+
+                    if start_time <= current_time <= end_time: # Contest is running
+                        is_registered, reg_error = contest_service.is_user_registered(contest_id, user_id)
+                        if reg_error:
+                            print(f"Error checking registration for contest {contest_id}: {reg_error['error']}")
+                            return jsonify({"error": "Failed to check contest registration status."}), 500
+                        
+                        if not is_registered:
+                            return jsonify({"error": "You must be registered for this contest to submit solutions."}), 403
+        except json.JSONDecodeError:
+            print(f"Error decoding problem meta.json for {problem_id}")
 
     result = handle_new_submission(problem_id, user_id, language, code)
 

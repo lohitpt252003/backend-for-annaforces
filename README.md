@@ -543,7 +543,44 @@ If these flags are true, you can use the following endpoints to retrieve the PDF
 }
 ```
 
-### Google Sign-In
+### Users API
+
+**Endpoint:** `/api/users/<user_id>/contests`
+
+**Method:** `GET`
+
+**Description:** Retrieves a list of contest IDs that the specified user has registered for. Requires a valid JWT in the Authorization header.
+
+**URL Parameters:**
+
+- `user_id`: The ID of the user to retrieve contest participation for.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+[
+  "C1",
+  "C2"
+]
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
 
 **Endpoint:** `/api/auth/google-signin`
 

@@ -1,4 +1,6 @@
 GITHUB_PROBLEMS_BASE_PATH = 'data/problems'
 GITHUB_USERS_BASE_PATH = 'data/users'
 GITHUB_SUBMISSIONS_BASE_PATH='data/submissions'
-
+GITHUB_CONTESTS_BASE_PATH = 'data/contests'
+GITHUB_CONTEST_PARTICIPANTS_FILE = 'participants.json'
+GITHUB_CONTEST_LEADERBOARD_FILE = 'leaderboard.json'

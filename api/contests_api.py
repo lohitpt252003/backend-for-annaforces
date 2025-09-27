@@ -4,6 +4,8 @@ import os
 from services import contest_service
 from utils.jwt_token import validate_token
 from functools import wraps
+from datetime import datetime
+import pytz
 
 contests_api = Blueprint('contests_api', __name__)
 
@@ -58,4 +60,37 @@ def get_contest(current_user, contest_id):
     contest_data, error = contest_service.get_contest_details(contest_id)
     if error:
         return jsonify(error), 404
-    return jsonify(contest_data)
+
+    start_time_str = contest_data.get('startTime')
+    if start_time_str:
+        start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=pytz.UTC)
+        if datetime.now(pytz.UTC) < start_time:
+            return jsonify({'status': 'not_started', 'message': 'The contest has not begun yet'}), 200
+
+    return jsonify({'status': 'started', 'data': contest_data}), 200
+
+@contests_api.route('/<contest_id>/is-registered', methods=['GET'])
+@token_required
+def check_contest_registration(current_user, contest_id):
+    user_id = current_user['user_id']
+    is_registered, error = contest_service.is_user_registered(contest_id, user_id)
+    if error:
+        return jsonify(error), 500
+    return jsonify({"is_registered": is_registered}), 200
+
+@contests_api.route('/<contest_id>/register', methods=['POST'])
+@token_required
+def register_for_contest(current_user, contest_id):
+    user_id = current_user['user_id']
+    success, error = contest_service.register_user_for_contest(contest_id, user_id)
+    if error:
+        return jsonify(error), 500
+    return jsonify({"message": "Successfully registered for the contest."}), 200
+
+@contests_api.route('/<contest_id>/leaderboard', methods=['GET'])
+@token_required
+def get_contest_leaderboard_api(current_user, contest_id):
+    leaderboard, error = contest_service.get_contest_leaderboard(contest_id)
+    if error:
+        return jsonify(error), 500
+    return jsonify(leaderboard), 200

@@ -109,6 +109,7 @@ def get_user_by_id(user_id):
         meta_data.setdefault('attempted', {})
         meta_data.setdefault('solved', {})
         meta_data.setdefault('not_solved', {})
+        meta_data.setdefault('contests', {}) # Initialize new contests field
         return meta_data, None
     except json.JSONDecodeError:
         return None, {"error": "Failed to decode meta.json"}
@@ -204,8 +205,37 @@ def update_user_problem_status(user_id, problem_id, new_status):
         f"[AUTO] Update problem status for user {user_id} and problem {problem_id}"
     )
 
+    return True, None
+
+def update_user_contests_status(user_id, contest_id):
+    meta_path = f"{GITHUB_USERS_BASE_PATH}/{user_id}/meta.json"
+    meta_content, meta_sha, meta_error = get_file(meta_path)
+
+    if meta_error:
+        print(f"Error fetching user meta.json for {user_id}: {meta_error['message']}")
+        return False, {"error": f"Could not fetch user metadata: {meta_error['message']}"}
+
+    try:
+        meta_data = json.loads(meta_content)
+    except json.JSONDecodeError:
+        print(f"Error decoding user meta.json for {user_id}")
+        return False, {"error": "Failed to decode user metadata."}
+
+    # Ensure the contests field exists and is a dictionary
+    meta_data.setdefault('contests', {})
+
+    # Add contest_id to the contests dictionary with current timestamp
+    timestamp = datetime.now().isoformat()
+    meta_data['contests'][contest_id] = timestamp
+
+    update_meta_result = create_or_update_file(
+        meta_path,
+        json.dumps(meta_data, indent=2),
+        f"[AUTO] Add contest {contest_id} to user {user_id}'s attended contests"
+    )
+
     if "error" in update_meta_result:
-        print(f"Error updating user problem status for {user_id}: {update_meta_result['message']}")
-        return False, {"error": f"Failed to update user problem status: {update_meta_result['message']}"}
+        print(f"Error updating user contest status for {user_id}: {update_meta_result['message']}")
+        return False, {"error": f"Failed to update user contest status: {update_meta_result['message']}"}
 
     return True, None

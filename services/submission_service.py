@@ -1,8 +1,10 @@
 import os, time, json, threading
+from datetime import datetime
 
 from services.github_services import get_file, add_file, update_file, create_or_update_file
 from services.judge_service import grade_submission
 from services.user_service import update_user_problem_status
+from services import contest_service
 from config.github_config import GITHUB_PROBLEMS_BASE_PATH, GITHUB_USERS_BASE_PATH, GITHUB_SUBMISSIONS_BASE_PATH
 
 def _process_submission_in_background(new_submission_id, problem_id, user_id, language, code):
@@ -55,6 +57,44 @@ def _process_submission_in_background(new_submission_id, problem_id, user_id, la
     success, update_error = update_user_problem_status(user_id, problem_id, user_problem_new_status)
     if update_error:
         print(f"Error updating user problem status for {user_id} and {problem_id}: {update_error['error']}")
+
+    # Check if the problem belongs to a contest and update leaderboard
+    problem_meta_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/meta.json"
+    problem_meta_content, _, problem_meta_error = get_file(problem_meta_path)
+
+    if not problem_meta_error:
+        try:
+            problem_meta_data = json.loads(problem_meta_content)
+            contest_id = problem_meta_data.get('contest_id')
+
+            if contest_id:
+                contest_details, contest_details_error = contest_service.get_contest_details(contest_id)
+
+                if not contest_details_error and contest_details:
+                    start_time = datetime.fromisoformat(contest_details['startTime'].replace('Z', '+00:00'))
+                    end_time = datetime.fromisoformat(contest_details['endTime'].replace('Z', '+00:00'))
+                    current_time = datetime.fromisoformat(submission_meta_data["timestamp"].replace('Z', '+00:00'))
+
+                    if start_time <= current_time <= end_time:
+                        time_taken_delta = current_time - start_time
+                        total_seconds = int(time_taken_delta.total_seconds())
+                        hours, remainder = divmod(total_seconds, 3600)
+                        minutes, seconds = divmod(remainder, 60)
+                        time_taken_str = f"{hours:02}:{minutes:02}:{seconds:02}"
+
+                        leaderboard_update_success, leaderboard_update_error = contest_service.update_contest_leaderboard(
+                            contest_id,
+                            user_id,
+                            problem_id,
+                            overall_status,
+                            submission_meta_data["timestamp"],
+                            time_taken_str,
+                            0 # Placeholder for penalty
+                        )
+                        if leaderboard_update_error:
+                            print(f"Error updating leaderboard for contest {contest_id}: {leaderboard_update_error['error']}")
+        except json.JSONDecodeError:
+            print(f"Error decoding problem meta.json for {problem_id}")
 
     # 4. Update Problem Data
     problem_submission_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/submissions/{new_submission_id}.json"
