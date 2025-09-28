@@ -135,11 +135,10 @@ def get_problem_by_id(current_user, problem_id):
             if not contest_details_error and contest_details:
                 start_time = datetime.fromisoformat(contest_details['startTime'].replace('Z', '+00:00'))
                 current_time = datetime.now(pytz.UTC)
-
+            
                 if current_time < start_time:
                     contest_name = contest_details.get('name', 'Unnamed Contest')
                     return jsonify({"status": "not_started", "message": f"The contest '{contest_name}' has not started yet and the problem won't be revealed now."}), 200
-
     except json.JSONDecodeError:
         return jsonify({"error": "Failed to decode JSON data"}), 500
 
@@ -157,6 +156,14 @@ def get_problem_by_id(current_user, problem_id):
     output_content, _, output_error = get_file(output_path)
     notes_content, _, notes_error = get_file(notes_path)
     constraints_content, _, constraints_error = get_file(constraints_path)
+
+    # Handle optional files (header.md, notes.md)
+    if header_error and "not found" in header_error["message"].lower():
+        header_content = ""
+        header_error = None
+    if notes_error and "not found" in notes_error["message"].lower():
+        notes_content = ""
+        notes_error = None
 
     # Check for errors in reading main problem files
     for err in [header_error, description_error, input_error, output_error, notes_error, constraints_error]:

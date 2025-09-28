@@ -102,6 +102,9 @@ These measures contribute to a more robust and secure application.
 
 - **Problems API:**
   - Fixed a bug in the `/api/problems/<problem_id>/submissions` endpoint that caused a 500 error when a problem had no submissions. The endpoint now correctly returns an empty list.
+  - Fixed an indentation error in `problems_api.py` that caused a syntax issue.
+- **Contest Data:**
+  - Adjusted the `startTime` for contest `C2` in `DATA/data/contests/C2/meta.json` to ensure problems associated with it are revealed as intended.
 - **GitHub Service:**
   - Fixed an issue where files larger than 1MB could not be fetched from GitHub. The service now uses the `download_url` for large files.
 - **Submission Service:**
