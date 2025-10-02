@@ -94,6 +94,52 @@ This document provides an overview of the available APIs.
 Possible error messages:
 - `Problem not found`
 
+**Endpoint:** `/api/problems/<problem_id>/meta`
+
+**Method:** `GET`
+
+**Description:** Retrieves only the metadata for a specific problem by its ID. This is a more efficient endpoint for fetching problem information when full problem details are not required. The `problem_id` must have the prefix 'P' (e.g., 'P1').
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**URL Parameters:**
+
+- `problem_id`: The ID of the problem to retrieve metadata for.
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "id": "P1",
+  "title": "Add",
+  "difficulty": "Easy",
+  "tags": ["easy", "input", "output"],
+  "authors": ["boss", "baz"],
+  "memoryLimit": 256,
+  "timeLimit": 1000,
+  "contest_id": "C1"
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized (if token is missing or invalid), 404 Not Found (if problem meta not found), 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+Possible error messages:
+- `Problem meta not found`
+
 **Endpoint:** `/api/problems/<problem_id>/solution`
 
 **Method:** `GET`

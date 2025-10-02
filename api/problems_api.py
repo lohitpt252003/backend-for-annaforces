@@ -221,6 +221,36 @@ def get_problem_by_id(current_user, problem_id):
 
     return jsonify({"status": "started", "data": problem_data}), 200
 
+@problems_bp.route('/<problem_id>/meta', methods=['GET'])
+@token_required
+def get_problem_meta_by_id(current_user, problem_id):
+    problem_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}"
+    meta_path = f"{problem_path}/meta.json"
+    index_file_path = f"{GITHUB_PROBLEMS_BASE_PATH}/index.json"
+
+    meta_content, _, meta_error = get_file(meta_path)
+    if meta_error:
+        if "not found" in meta_error["message"].lower():
+            return jsonify({"error": "Problem meta not found"}), 404
+        return jsonify({"error": meta_error["message"]}), 500
+
+    index_content, _, index_error = get_file(index_file_path)
+    if index_error:
+        return jsonify({"error": index_error["message"]}), 500
+
+    try:
+        meta_data = json.loads(meta_content)
+        problem_index = json.loads(index_content)
+
+        problem_info_from_index = problem_index.get(problem_id, {})
+        meta_data['tags'] = problem_info_from_index.get('tags', [])
+        meta_data['authors'] = problem_info_from_index.get('authors', [])
+        meta_data['difficulty'] = problem_info_from_index.get('difficulty')
+
+        return jsonify(meta_data), 200
+    except json.JSONDecodeError:
+        return jsonify({"error": "Failed to decode JSON"}), 500
+
 
 @problems_bp.route('/<problem_id>/solution', methods=['GET'])
 @token_required
