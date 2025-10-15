@@ -32,7 +32,7 @@ def get_submission_by_id(current_user, submission_id):
         submission_data = json.loads(meta_content)
 
         problem_id = submission_data.get("problem_id")
-        submission_user_id = submission_data.get("user_id")
+        submission_username = submission_data.get("username")
 
         if problem_id:
             problem_meta_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/meta.json"
@@ -52,7 +52,7 @@ def get_submission_by_id(current_user, submission_id):
                             current_time = datetime.now(pytz.UTC)
 
                             if start_time <= current_time <= end_time: # Contest is running
-                                if current_user['user_id'] != submission_user_id:
+                                if current_user['username'] != submission_username:
                                     return jsonify({"error": "You are not allowed to see the submission of the other user during the contest."}), 403
                 except json.JSONDecodeError:
                     pass # Ignore if problem meta is invalid

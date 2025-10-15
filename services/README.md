@@ -44,7 +44,7 @@ This directory contains various service modules used in the `backend-for-annafor
   - **Dependencies**: `json`, `re`, `services.github_services`, `config.github_config`.
 
 - `submission_service.py`:
-  - **Description**: Manages the lifecycle of user code submissions using an asynchronous, live-updating approach. It immediately queues a submission for processing and returns a submission ID. A background thread then handles the judging process, updating the submission status on GitHub after each test case is executed.
+  - **Description**: Manages the lifecycle of user code submissions using an asynchronous, live-updating approach. It immediately queues a submission for processing and returns a submission ID. A background thread then handles the judging process. After each test case, it updates the status in the main submission file as well as the reference files in the user and problem directories, ensuring live data consistency.
   - **Key Functions**:
     - `handle_new_submission(problem_id, user_id, language, code)`: Creates initial submission files, queues the submission for judging in a background thread, and returns an immediate response.
   - **Dependencies**: `os`, `time`, `json`, `threading`, `services.github_services`, `services.judge_service`, `config.github_config`.

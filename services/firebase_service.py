@@ -31,11 +31,11 @@ else:
         db = None
         ph = None
 
-def get_user(user_id):
+def get_user(username):
     """Fetches a user from the Firestore database.
 
     Args:
-        user_id (str): The ID of the user to fetch.
+        username (str): The username of the user to fetch.
 
     Returns:
         tuple: A tuple containing the user data (dict) and an error message (str).
@@ -44,18 +44,24 @@ def get_user(user_id):
     """
     if not db:
         return None, "Database not initialized. FIREBASE_DB_JSON_PATH not set."
-    doc_ref = db.collection(u'users').document(user_id)
-    doc = doc_ref.get()
-    if doc.exists:
-        return doc.to_dict(), None
+    
+    # Query for the user by username
+    users_ref = db.collection(u'users')
+    query = users_ref.where(u'username', u'==', username).limit(1)
+    docs = query.stream()
+    
+    user_doc = next(docs, None)
+    
+    if user_doc:
+        return user_doc.to_dict(), None
     else:
         return None, None
 
-def add_user(user_id, password=None, method='password', user_data=None, otp_secret=None, otp_expiry=None, is_verified=False):
+def add_user(username, password=None, method='password', user_data=None, otp_secret=None, otp_expiry=None, is_verified=False):
     """Adds a new user to the Firestore database.
 
     Args:
-        user_id (str): The ID of the new user.
+        username (str): The username of the new user.
         password (str, optional): The password for the new user if method is 'password'. Defaults to None.
         method (str): The sign-up method ('password' or 'google'). Defaults to 'password'.
         user_data (dict, optional): Additional user data for 'google' method (e.g., email, name). Defaults to None.
@@ -70,9 +76,10 @@ def add_user(user_id, password=None, method='password', user_data=None, otp_secr
     if not db:
         return None, "Database not initialized. FIREBASE_DB_JSON_PATH not set."
     
-    doc_ref = db.collection(u'users').document(user_id)
+    doc_ref = db.collection(u'users').document(username)
     
     user_doc = {
+        u'username': username,
         u'method': method,
         u'is_verified': is_verified
     }
@@ -99,11 +106,11 @@ def add_user(user_id, password=None, method='password', user_data=None, otp_secr
 
     return True, None
 
-def verify_user(user_id, password):
+def verify_user(username, password):
     """Verifies the password of an existing user.
 
     Args:
-        user_id (str): The ID of the user to verify.
+        username (str): The username of the user to verify.
         password (str): The password to verify.
 
     Returns:
@@ -114,7 +121,7 @@ def verify_user(user_id, password):
     """
     if not db:
         return None, "Database not initialized. FIREBASE_DB_JSON_PATH not set."
-    user_data, error = get_user(user_id)
+    user_data, error = get_user(username)
     if error:
         return None, error
     if user_data:
@@ -129,11 +136,11 @@ def verify_user(user_id, password):
         # User not found
         return False, "User not registered"
 
-def verify_otp(user_id, otp):
+def verify_otp(username, otp):
     """Verifies the OTP for a given user.
 
     Args:
-        user_id (str): The ID of the user.
+        username (str): The username of the user.
         otp (str): The OTP to verify.
 
     Returns:
@@ -144,7 +151,7 @@ def verify_otp(user_id, otp):
     if not db:
         return False, "Database not initialized."
 
-    user_data, error = get_user(user_id)
+    user_data, error = get_user(username)
     if error:
         return False, error
     if not user_data:
@@ -162,7 +169,7 @@ def verify_otp(user_id, otp):
 
     if stored_otp == otp:
         # Mark user as verified and clear OTP fields
-        user_ref = db.collection(u'users').document(user_id)
+        user_ref = db.collection(u'users').document(username)
         user_ref.update({
             u'is_verified': True,
             u'otp_secret': firestore.DELETE_FIELD,
@@ -208,9 +215,13 @@ def get_or_create_google_user(id_token):
 
     try:
         decoded_token = verify_google_token(id_token)
-        google_uid = decoded_token['uid']
+        email = decoded_token.get('email')
+        if not email:
+            return None, "Email not found in Google token."
 
-        user_data, error = get_user(google_uid)
+        username = email # Using email as username
+
+        user_data, error = get_user(username)
         if error:
             return None, error
 
@@ -220,16 +231,16 @@ def get_or_create_google_user(id_token):
         else:
             # User does not exist, create a new one
             user_info = {
-                'email': decoded_token.get('email'),
+                'email': email,
                 'name': decoded_token.get('name'),
                 'picture': decoded_token.get('picture'),
             }
-            success, error = add_user(google_uid, method='google', user_data=user_info)
+            success, error = add_user(username, method='google', user_data=user_info)
             if error:
                 return None, error
             
             # Fetch the newly created user to return complete data
-            return get_user(google_uid)
+            return get_user(username)
 
     except ValueError as e:
         return None, str(e)

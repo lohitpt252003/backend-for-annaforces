@@ -10,6 +10,10 @@ For a detailed understanding of how problems, submissions, users, and solutions 
 
 The backend is deployed at: `http://localhost:5000/`
 
+## Data Model Changes
+
+The data model has been updated to use `username` as the primary identifier for users, deprecating the old `user_id`. This change is reflected across the entire application, including the database schema, API endpoints, and frontend components.
+
 ## Services
 
 ### GitHub Service
@@ -55,14 +59,14 @@ The `services/submission_service.py` handles the submission of solutions by user
 
 When a user submits a solution, the system provides real-time feedback as the submission is processed:
 
-1.  **Immediate Response:** The API immediately creates the submission files with a **"Queued"** status and returns a `submission_id` to the user.
+1.  **Immediate Response:** The API immediately creates the main submission files with a **"Queued"** status and returns a `submission_id` to the user.
 2.  **Background Processing:** The entire judging process is handled in a background thread, making the user interface feel much more responsive.
-3.  **Live Status Updates:**
+3.  **Comprehensive Live Status Updates:**
     *   The submission status is first set to **"Running... (Testcase X)"** as each test case is executed.
-    *   After every single test case, the submission's `meta.json` file on GitHub is updated with the latest results.
-    *   Once all test cases are complete, the final verdict (e.g., "Accepted", "Wrong Answer") is calculated and all relevant files (submission metadata, user statistics, problem statistics) are updated on GitHub.
+    *   After every single test case, the system updates the status not only in the main submission file (`submissions/S<id>/meta.json`) but also in the reference files located in the user's and problem's directories (`users/U<id>/submissions/S<id>.json` and `problems/P<id>/submissions/S<id>.json`). This ensures the live status is reflected consistently across the entire data structure.
+    *   Once all test cases are complete, the final verdict (e.g., "Accepted", "Wrong Answer") is calculated and all relevant files (the main submission metadata, the user/problem references, and overall user/problem statistics) are updated on GitHub with the final result.
 
-This architecture allows the frontend to poll the submission endpoint and display live updates to the user.
+This architecture allows the frontend to poll any submission-related endpoint and receive a consistent, live status, making the system more robust and transparent.
 
 ### Judge Service
 
@@ -154,12 +158,12 @@ For more details on the tests, see the `README.md` file in the `tests` directory
 
 ### Auth API
 
-The `/api/auth/login` endpoint handles user authentication. It expects a `user_id` and `password` in the request body. Upon successful authentication, it returns a JWT token. If the user is not found, a specific error message is returned.
+The `/api/auth/login` endpoint handles user authentication. It expects a `username` and `password` in the request body. Upon successful authentication, it returns a JWT token. If the user is not found, a specific error message is returned.
 
 **Example to get a token:**
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d "{"user_id": "U1", "password": "1234"}" https://backend-for-annaforces.onrender.com/api/auth/login
+curl -X POST -H "Content-Type: application/json" -d '{"username": "testuser", "password": "password123"}' http://localhost:5000/api/auth/login
 ```
 
 ### Problems API
@@ -422,15 +426,15 @@ If these flags are true, you can use the following endpoints to retrieve the PDF
 }
 ```
 
-**Endpoint:** `/api/users/<user_id>/submissions`
+**Endpoint:** `/api/users/<username>/submissions`
 
 **Method:** `GET`
 
-**Description:** Retrieves all submissions for a specific user. Requires a valid JWT in the Authorization header. The `user_id` must have the prefix 'U' (e.g., 'U1') and consist only of alphanumeric characters. Submissions are sorted by timestamp in descending order (newest first).
+**Description:** Retrieves all submissions for a specific user. Requires a valid JWT in the Authorization header.
 
 **URL Parameters:**
 
-- `user_id`: The ID of the user to retrieve submissions for.
+- `username`: The username of the user to retrieve submissions for.
 
 **Authorization Header:**
 
@@ -446,7 +450,7 @@ If these flags are true, you can use the following endpoints to retrieve the PDF
   "submissions": [
     {
       "submission_id": "S1",
-      "user_id": "U1",
+      "username": "testuser",
       "problem_id": "P1",
       "timestamp": "2023-10-27T10:00:00Z",
       "status": "Accepted",
@@ -470,15 +474,15 @@ If these flags are true, you can use the following endpoints to retrieve the PDF
 
 ### Users API
 
-**Endpoint:** `/api/users/<user_id>/username`
+**Endpoint:** `/api/users/<username>`
 
 **Method:** `GET`
 
-**Description:** Retrieves the username for a specific user ID. Requires a valid JWT in the Authorization header.
+**Description:** Retrieves a specific user by their username. Requires a valid JWT in the Authorization header.
 
 **URL Parameters:**
 
-- `user_id`: The ID of the user to retrieve the username for.
+- `username`: The username of the user to retrieve.
 
 **Authorization Header:**
 
@@ -491,7 +495,14 @@ If these flags are true, you can use the following endpoints to retrieve the PDF
 
 ```json
 {
-  "username": "testuser"
+  "username": "testuser",
+  "name": "Test User",
+  "bio": "This is a test user.",
+  "joined": "2023-10-27",
+  "number_of_submissions": 10,
+  "attempted": {},
+  "solved": {},
+  "not_solved": {}
 }
 ```
 
@@ -506,9 +517,53 @@ If these flags are true, you can use the following endpoints to retrieve the PDF
 }
 ```
 
-### Users API
+**Endpoint:** `/api/users/<username>/submissions`
 
-**Endpoint:** `/api/users/<user_id>/problem-status`
+**Method:** `GET`
+
+**Description:** Retrieves all submissions for a specific user. Requires a valid JWT in the Authorization header.
+
+**URL Parameters:**
+
+- `username`: The username of the user to retrieve submissions for.
+
+**Authorization Header:**
+
+`Authorization: Bearer <your_jwt_token>`
+
+**Success Response:**
+
+- **Code:** 200 OK
+- **Content:**
+
+```json
+{
+  "submissions": [
+    {
+      "submission_id": "S1",
+      "username": "testuser",
+      "problem_id": "P1",
+      "timestamp": "2023-10-27T10:00:00Z",
+      "status": "Accepted",
+      "language": "cpp"
+    }
+  ],
+  "total_submissions": 1
+}
+```
+
+**Error Response:**
+
+- **Code:** 401 Unauthorized, 500 Internal Server Error
+- **Content:**
+
+```json
+{
+  "error": "<error message>"
+}
+```
+
+**Endpoint:** `/api/users/<username>/problem-status`
 
 **Method:** `GET`
 
@@ -516,7 +571,7 @@ If these flags are true, you can use the following endpoints to retrieve the PDF
 
 **URL Parameters:**
 
-- `user_id`: The ID of the user to retrieve problem statuses for.
+- `username`: The username of the user to retrieve problem statuses for.
 
 **Authorization Header:**
 
@@ -546,9 +601,7 @@ If these flags are true, you can use the following endpoints to retrieve the PDF
 }
 ```
 
-### Users API
-
-**Endpoint:** `/api/users/<user_id>/contests`
+**Endpoint:** `/api/users/<username>/contests`
 
 **Method:** `GET`
 
@@ -556,7 +609,7 @@ If these flags are true, you can use the following endpoints to retrieve the PDF
 
 **URL Parameters:**
 
-- `user_id`: The ID of the user to retrieve contest participation for.
+- `username`: The username of the user to retrieve contest participation for.
 
 **Authorization Header:**
 
@@ -607,7 +660,6 @@ If these flags are true, you can use the following endpoints to retrieve the PDF
 ```json
 {
   "message": "Google sign-in successful",
-  "user_id": "<Firebase UID>",
   "username": "<Google Email>",
   "name": "<Google Display Name>",
   "token": "<JWT>"
@@ -690,7 +742,7 @@ If these flags are true, you can use the following endpoints to retrieve the PDF
 ```json
 {
   "message": "Email verified and user registered successfully!",
-  "user_id": "U3"
+  "username": "new_username"
 }
 ```
 
@@ -711,7 +763,7 @@ If these flags are true, you can use the following endpoints to retrieve the PDF
 
 **Method:** `POST`
 
-**Description:** Sends an email to the user containing their User ID and username if the provided email exists in the system. Returns a generic message to prevent email enumeration.
+**Description:** Sends an email to the user containing their username if the provided email exists in the system. Returns a generic message to prevent email enumeration.
 
 **Request Body:**
 

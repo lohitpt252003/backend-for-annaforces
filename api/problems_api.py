@@ -311,7 +311,7 @@ def get_problem_solution(current_user, problem_id):
 @token_required
 def submit_problem(current_user, problem_id):
     data = request.get_json()
-    user_id = current_user['user_id']
+    username = current_user['username'] # Changed from user_id
     language = data.get('language')
     code = data.get('code')
     is_base64_encoded = data.get('is_base64_encoded', False)
@@ -351,7 +351,7 @@ def submit_problem(current_user, problem_id):
                     current_time = datetime.now(pytz.UTC)
 
                     if start_time <= current_time <= end_time: # Contest is running
-                        is_registered, reg_error = contest_service.is_user_registered(contest_id, user_id)
+                        is_registered, reg_error = contest_service.is_user_registered(contest_id, username)
                         if reg_error:
                             print(f"Error checking registration for contest {contest_id}: {reg_error['error']}")
                             return jsonify({"error": "Failed to check contest registration status."}), 500
@@ -361,16 +361,10 @@ def submit_problem(current_user, problem_id):
         except json.JSONDecodeError:
             print(f"Error decoding problem meta.json for {problem_id}")
 
-    result = handle_new_submission(problem_id, user_id, language, code)
+    result = handle_new_submission(problem_id, username, language, code)
 
     if "error" in result:
         return jsonify({"error": result["error"]}), 500
-    
-    user_meta_path = f"{GITHUB_USERS_BASE_PATH}/{user_id}/meta.json"
-    problem_meta_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/meta.json"
-
-    update_meta_submissions(user_meta_path)
-    update_meta_submissions(problem_meta_path)
     
     return jsonify(result), 200
 
@@ -398,12 +392,12 @@ def get_problem_submissions(current_user, problem_id):
                     with open(local_file_path, 'r', encoding='utf-8') as f:
                         all_submissions.append(json.loads(f.read()))
                 else:
-                    # Fetch from URL for GitHub files
-                    file_content_resp = requests.get(item['download_url'])
-                    if file_content_resp.status_code == 200:
-                        all_submissions.append(json.loads(file_content_resp.text))
+                    # Fetch from URL for GitHub files using get_file
+                    content, _, file_error = get_file(item['path'])
+                    if not file_error:
+                        all_submissions.append(json.loads(content))
                     else:
-                        print(f"Error fetching content for {item['path']}: HTTP {file_content_resp.status_code}")
+                        print(f"Error fetching content for {item['path']}: {file_error['message']}")
             except json.JSONDecodeError:
                 print(f"Error decoding JSON for {item['path']}")
                 continue

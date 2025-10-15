@@ -272,7 +272,7 @@ Possible error messages:
 
 **Method:** `POST`
 
-**Description:** Submits a solution for a specific problem. Requires a valid JWT in the Authorization header. The supported languages are `c`, `c++`, and `python`. The language `cpp` is also accepted as an alias for `c++`. When a solution is submitted, the `number_of_submissions` is automatically incremented for both the user and the problem. All related file changes in the `DATA` repository are committed with a message prefixed with `[AUTO]`.
+**Description:** Submits a solution for a specific problem. Requires a valid JWT in the Authorization header. The supported languages are `c`, `c++`, and `python`. The language `cpp` is also accepted as an alias for `c++`. This endpoint returns an immediate response and processes the submission in the background. During processing, it provides live status updates to all relevant records, including the main submission file and the reference files in the user and problem directories. Finally, it increments submission counts for the user and the problem. All file changes are committed with a message prefixed with `[AUTO]`.
 
 **Authorization Header:**
 
@@ -400,7 +400,7 @@ Possible error messages:
 [
   {
     "submission_id": "S1",
-    "user_id": "U1",
+    "username": "testuser",
     "problem_id": "P1",
     "timestamp": "2023-10-27T10:00:00Z",
     "status": "Accepted",
@@ -408,7 +408,7 @@ Possible error messages:
   },
   {
     "submission_id": "S2",
-    "user_id": "U2",
+    "username": "anotheruser",
     "problem_id": "P1",
     "timestamp": "2023-10-27T10:05:00Z",
     "status": "Wrong Answer",
@@ -454,7 +454,7 @@ Possible error messages:
 {
   "submission_id": "S1",
   "problem_id": "P1",
-  "user_id": "U1",
+  "username": "testuser",
   "language": "python",
   "code": "print(1+2)",
   "status": "Accepted",
@@ -587,7 +587,6 @@ Possible error messages:
   "last_updated": "2025-10-01T12:30:00Z",
   "standings": [
     {
-      "user_id": "U1",
       "username": "boss",
       "total_score": 200,
       "total_penalty": 10,
@@ -719,6 +718,8 @@ Possible error messages:
 }
 ```
 
+## Users API
+
 **Endpoint:** `/api/users/`
 
 **Method:** `GET`
@@ -731,16 +732,16 @@ Possible error messages:
 - **Content:**
 
 ```json
-{
-  "U1": {
-    "Name": "Chris Gayle",
-    "username": "boss"
-  },
-  "U2": {
-    "email": "Brendon McCullum",
-    "username": "baz"
-  }
-}
+[
+    {
+        "username": "testuser",
+        "name": "Test User"
+    },
+    {
+        "username": "anotheruser",
+        "name": "Another User"
+    }
+]
 ```
 
 **Error Response:**
@@ -754,19 +755,19 @@ Possible error messages:
 }
 ```
 
-**Endpoint:** `/api/users/<user_id>`
+**Endpoint:** `/api/users/<username>`
 
 **Method:** `GET`
 
-**Description:** Retrieves a specific user by their ID. Requires a valid JWT in the Authorization header. Any authenticated user can view any other user's profile details. The `user_id` must have the prefix 'U' (e.g., 'U1') and consist only of alphanumeric characters.
+**Description:** Retrieves a specific user by their username. Requires a valid JWT in the Authorization header.
+
+**URL Parameters:**
+
+- `username`: The username of the user to retrieve.
 
 **Authorization Header:**
 
 `Authorization: Bearer <your_jwt_token>`
-
-**URL Parameters:**
-
-- `user_id`: The ID of the user to retrieve.
 
 **Success Response:**
 
@@ -775,14 +776,20 @@ Possible error messages:
 
 ```json
 {
-  "Name": "Test User",
-  "username": "testuser"
+  "username": "testuser",
+  "name": "Test User",
+  "bio": "This is a test user.",
+  "joined": "2023-10-27",
+  "number_of_submissions": 10,
+  "attempted": {},
+  "solved": {},
+  "not_solved": {}
 }
 ```
 
 **Error Response:**
 
-- **Code:** 401 Unauthorized (if token is missing or invalid), 400 Bad Request (if user_id format is invalid), 500 Internal Server Error
+- **Code:** 401 Unauthorized, 404 Not Found, 500 Internal Server Error
 - **Content:**
 
 ```json
@@ -791,19 +798,19 @@ Possible error messages:
 }
 ```
 
-**Endpoint:** `/api/users/<user_id>/submissions`
+**Endpoint:** `/api/users/<username>/submissions`
 
 **Method:** `GET`
 
-**Description:** Retrieves all submissions for a specific user. Requires a valid JWT in the Authorization header. Any authenticated user can view any other user's submissions. The `user_id` must have the prefix 'U' (e.g., 'U1') and consist only of alphanumeric characters.
+**Description:** Retrieves all submissions for a specific user. Requires a valid JWT in the Authorization header.
+
+**URL Parameters:**
+
+- `username`: The username of the user to retrieve submissions for.
 
 **Authorization Header:**
 
 `Authorization: Bearer <your_jwt_token>`
-
-**URL Parameters:**
-
-- `user_id`: The ID of the user to retrieve submissions for.
 
 **Success Response:**
 
@@ -814,7 +821,7 @@ Possible error messages:
 [
   {
     "submission_id": "S1",
-    "user_id": "U1",
+    "username": "testuser",
     "problem_id": "P1",
     "timestamp": "2023-10-27T10:00:00Z",
     "status": "Accepted",
@@ -825,7 +832,7 @@ Possible error messages:
 
 **Error Response:**
 
-- **Code:** 401 Unauthorized (if token is missing or invalid), 400 Bad Request (if user_id format is invalid), 500 Internal Server Error
+- **Code:** 401 Unauthorized, 500 Internal Server Error
 - **Content:**
 
 ```json
@@ -835,19 +842,19 @@ Possible error messages:
 ```
 
 
-**Endpoint:** `/api/users/<user_id>/solved`
+**Endpoint:** `/api/users/<username>/solved`
 
 **Method:** `GET`
 
-**Description:** Retrieves a list of unique problems solved by a specific user (submissions with 'Accepted' status). Requires a valid JWT in the Authorization header. Any authenticated user can view any other user's solved problems. The `user_id` must have the prefix 'U' (e.g., 'U1') and consist only of alphanumeric characters.
+**Description:** Retrieves a list of unique problems solved by a specific user (submissions with 'Accepted' status). Requires a valid JWT in the Authorization header.
+
+**URL Parameters:**
+
+- `username`: The username of the user to retrieve solved problems for.
 
 **Authorization Header:**
 
 `Authorization: Bearer <your_jwt_token>`
-
-**URL Parameters:**
-
-- `user_id`: The ID of the user to retrieve solved problems for.
 
 **Success Response:**
 
@@ -864,7 +871,7 @@ Possible error messages:
 
 **Error Response:**
 
-- **Code:** 401 Unauthorized (if token is missing or invalid), 400 Bad Request (if user_id format is invalid), 500 Internal Server Error
+- **Code:** 401 Unauthorized, 500 Internal Server Error
 - **Content:**
 
 ```json
@@ -873,48 +880,7 @@ Possible error messages:
 }
 ```
 
-
-## Users API
-
-**Endpoint:** `/api/users/<user_id>/username`
-
-**Method:** `GET`
-
-**Description:** Retrieves the username for a specific user ID. Requires a valid JWT in the Authorization header.
-
-**URL Parameters:**
-
-- `user_id`: The ID of the user to retrieve the username for.
-
-**Authorization Header:**
-
-`Authorization: Bearer <your_jwt_token>`
-
-**Success Response:**
-
-- **Code:** 200 OK
-- **Content:**
-
-```json
-{
-  "username": "testuser"
-}
-```
-
-**Error Response:**
-
-- **Code:** 401 Unauthorized, 404 Not Found, 500 Internal Server Error
-- **Content:**
-
-```json
-{
-  "error": "<error message>"
-}
-```
-
-## Users API
-
-**Endpoint:** `/api/users/<user_id>/problem-status`
+**Endpoint:** `/api/users/<username>/problem-status`
 
 **Method:** `GET`
 
@@ -922,7 +888,7 @@ Possible error messages:
 
 **URL Parameters:**
 
-- `user_id`: The ID of the user to retrieve problem statuses for.
+- `username`: The username of the user to retrieve problem statuses for.
 
 **Authorization Header:**
 
@@ -952,9 +918,7 @@ Possible error messages:
 }
 ```
 
-## Users API
-
-**Endpoint:** `/api/users/<user_id>/contests`
+**Endpoint:** `/api/users/<username>/contests`
 
 **Method:** `GET`
 
@@ -962,7 +926,7 @@ Possible error messages:
 
 **URL Parameters:**
 
-- `user_id`: The ID of the user to retrieve contest participation for.
+- `username`: The username of the user to retrieve contest participation for.
 
 **Authorization Header:**
 
@@ -995,13 +959,13 @@ Possible error messages:
 
 **Method:** `POST`
 
-**Description:** Authenticates a user with provided `user_id` and `password`. If the user is not found, a specific error message is returned.
+**Description:** Authenticates a user with provided `username` and `password`. If the user is not found, a specific error message is returned.
 
 **Request Body:**
 
 ```json
 {
-  "user_id": "U1",
+  "username": "testuser",
   "password": "your_password"
 }
 ```
@@ -1014,9 +978,8 @@ Possible error messages:
 ```json
 {
   "message": "Login successful",
-  "user_id": "U1",
-  "username": "boss",
-  "name": "Chris Gayle",
+  "username": "testuser",
+  "name": "Test User",
   "token": "<token>"
 }
 ```
@@ -1059,7 +1022,6 @@ Possible error messages:
 ```json
 {
   "message": "Google sign-in successful",
-  "user_id": "<Firebase UID>",
   "username": "<Google Email>",
   "name": "<Google Display Name>",
   "token": "<JWT>"
@@ -1144,7 +1106,7 @@ Possible error messages:
 ```json
 {
   "message": "Email verified and user registered successfully!",
-  "user_id": "U3"
+  "username": "new_username"
 }
 ```
 
@@ -1170,7 +1132,7 @@ Possible error messages:
 
 **Method:** `POST`
 
-**Description:** Sends an email to the user containing their User ID and username if the provided email exists in the system.
+**Description:** Sends an email to the user containing their username if the provided email exists in the system.
 
 **Request Body:**
 

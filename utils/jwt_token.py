@@ -10,9 +10,8 @@ SERVER_SECRET_KEY = os.getenv("SERVER_SECRET_KEY")
 # print(SERVER_SECRET_KEY)
 
 # Function generate the token
-def generate_token(user_id, username, name, expires_in=43200):
+def generate_token(username, name, expires_in=43200):
     payload = {
-        "user_id": user_id,
         "username": username,
         "name": name,
         "exp": int(time.time()) + expires_in  # expires in sec

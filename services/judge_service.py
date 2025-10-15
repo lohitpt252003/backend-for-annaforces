@@ -153,7 +153,7 @@ def grade_submission(code, language, problem_id):
                 message = "Memory Limit Exceeded"
             else:
                 test_status = "runtime_error"
-                message = f"Runtime Error: {err}"
+                message = f"Runtime Error: {stderr}"
         elif stdout.strip() != expected_stdout.strip():
             test_status = "wrong_answer"
             message = "Output mismatch"

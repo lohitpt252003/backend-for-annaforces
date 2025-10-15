@@ -8,3 +8,5 @@ argon2-cffi
 Flask-Mail
 pytest
 pytz
+pymongo
+Flask-PyMongo
