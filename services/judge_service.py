@@ -1,7 +1,9 @@
 import os
 import json
+import re
 import requests
 from dotenv import load_dotenv
+import subprocess
 
 load_dotenv()
 
@@ -11,10 +13,21 @@ from config.github_config import GITHUB_PROBLEMS_BASE_PATH
 SIZE = 50
 
 def get_testcases(problem_id):
+    print(f"--- Starting get_testcases for problem_id: {problem_id} ---")
     testcases = []
-    testcases_path = f'{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/testcases'
     
+    match = re.match(r'^(C\d+)([A-Z]+)$', problem_id)
+    if not match:
+        print(f"Invalid problem ID format for get_testcases: {problem_id}")
+        return []
+    contest_id = match.group(1)
+    problem_letter = match.group(2)
+
+    testcases_path = f'data/contests/{contest_id}/problems/{problem_letter}/testcases'
+    
+    print(f"[Get Testcases] Fetching test cases from: {testcases_path}")
     contents_response, error = get_folder_contents(testcases_path)
+    print(f"[Get Testcases] Contents response: {contents_response}")
 
     if error or not contents_response.get('success'):
         error_message = error['message'] if error else contents_response.get('error', 'Unknown error')
@@ -25,42 +38,27 @@ def get_testcases(problem_id):
     
     file_download_urls = {}
     for item in contents_list:
-        if item['type'] == 'file':
+        if item['type'] == 'file' and item['name'].endswith('.in'):
             file_download_urls[item['path']] = item['download_url']
 
-    max_test_case = 0
-    for filename_path in file_download_urls.keys():
-        if filename_path.endswith('.in'):
-            try:
-                base_filename = os.path.basename(filename_path)
-                num = int(os.path.splitext(base_filename)[0])
-                if num > max_test_case:
-                    max_test_case = num
-            except ValueError:
-                continue
+    print(f"[Get Testcases] File download URLs: {file_download_urls}")
 
-    if max_test_case == 0:
+    if not file_download_urls:
         return []
 
     print()
     print(SIZE * '=' + " EXTRACTING TESTCASES " + SIZE * '=')
-    for i in range(1, max_test_case + 1):
-        input_file_full_path = f'{testcases_path}/{i}.in'
-        output_file_full_path = f'{testcases_path}/{i}.out'
+    for file_path, download_url in file_download_urls.items():
+        input_content_resp = requests.get(download_url)
 
-        if input_file_full_path in file_download_urls and output_file_full_path in file_download_urls:
-            input_content_resp = requests.get(file_download_urls[input_file_full_path])
-            output_content_resp = requests.get(file_download_urls[output_file_full_path])
-
-            if input_content_resp.status_code == 200 and output_content_resp.status_code == 200:
-                testcases.append({
-                    'stdin': input_content_resp.text,
-                    'stdout': output_content_resp.text.strip()
-                })
-            else:
-                print(f"Warning: Failed to fetch content for test case {i}")
+        if input_content_resp.status_code == 200:
+            print(f"[Get Testcases] Fetched content for {file_path}: {input_content_resp.text}")
+            testcases.append({
+                'stdin': input_content_resp.text,
+                'path': file_path
+            })
         else:
-            print(f"Warning: Missing input or output file for test case {i}")
+            print(f"Warning: Failed to fetch content for test case {file_path}")
 
     print(testcases)
     print(SIZE * '=' + " DONE WITH EXTRACTING TESTCASES " + SIZE * '=')
@@ -87,6 +85,8 @@ def _execute_testcase(code, language, stdin, time_limit_s, memory_limit_mb):
     except requests.exceptions.RequestException as e:
         print(f"Error calling execution server: {e}")
         return None, {"overall_status": "error", "message": "Code execution server is not running. Please contact the admin."}
+
+import subprocess
 
 def grade_submission(code, language, problem_id):
     """
@@ -116,14 +116,26 @@ def grade_submission(code, language, problem_id):
     
     testcases = get_testcases(problem_id)
     
+    print(f"[Grade Submission] Test cases: {testcases}")
+
     if not testcases:
         yield {"overall_status": "error", "message": "No test cases found for this problem."}
         return
 
+    # Get validator path
+    validator_path = f"{GITHUB_PROBLEMS_BASE_PATH}/{problem_id}/validator.py"
+    validator_content, _, validator_error = get_file(validator_path)
+    if validator_error:
+        yield {"overall_status": "error", "message": f"Failed to get validator.py: {validator_error['message']}"}
+        return
+
+    # Write validator content to a temporary file
+    with open("temp_validator.py", "w") as f:
+        f.write(validator_content)
+
     for i, testcase in enumerate(testcases):
         print(SIZE * '=' + f' Running testcase {i + 1}! ' + '=' * SIZE)
         stdin = testcase.get('stdin', '')
-        expected_stdout = testcase.get('stdout', '')
         
         result, error = _execute_testcase(code, language, stdin, time_limit_s, memory_limit_mb)
         if error:
@@ -154,17 +166,28 @@ def grade_submission(code, language, problem_id):
             else:
                 test_status = "runtime_error"
                 message = f"Runtime Error: {stderr}"
-        elif stdout.strip() != expected_stdout.strip():
-            test_status = "wrong_answer"
-            message = "Output mismatch"
+        else:
+            # Create a temporary file for the input
+            with open("temp_input.txt", "w") as f:
+                f.write(stdin)
+            
+            # Run validator
+            process = subprocess.run(
+                ["python", "temp_validator.py", stdout, "temp_input.txt"],
+                capture_output=True,
+                text=True
+            )
+            verdict = process.stdout.strip()
+            if verdict != "Accepted":
+                test_status = "wrong_answer"
+                message = "Output mismatch"
         
-        yield {
-            "test_case_number": i + 1,
-            "status": test_status,
-            "message": message,
-            "execution_time": timetaken,
-            "memory_usage": memorytaken,
-            "actual_output": stdout.strip(),
-            "expected_output": expected_stdout,
-            "input": stdin
-        }
+        print(f"[Grade Submission] Determined test_status: {test_status}")
+        result["status"] = test_status
+        result["message"] = message
+        print(f"[Grade Submission] Yielding result: {result}")
+        yield result
+    
+    # Clean up temporary validator file
+    os.remove("temp_validator.py")
+

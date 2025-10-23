@@ -94,26 +94,28 @@ def update_user_problem_status(username, problem_id, new_status):
         return False, error
 
     timestamp = datetime.now().isoformat()
-    update_doc = {"$set": {}, "$unset": {}}
-
-    was_solved = problem_id in user.get('solved', {})
-
-    # Remove from old categories
-    update_doc["$unset"][f'attempted.{problem_id}'] = ""
-    update_doc["$unset"][f'not_solved.{problem_id}'] = ""
-
-    # Add to new category
-    if new_status == "solved":
-        update_doc["$set"][f'solved.{problem_id}'] = timestamp
-    elif not was_solved:
-        update_doc["$set"][f'not_solved.{problem_id}'] = timestamp
-
-    # Clean up empty $set/$unset keys
-    if not update_doc["$set"]:
-        del update_doc["$set"]
-    if not update_doc["$unset"]:
-        del update_doc["$unset"]
     
+    set_op = {}
+    unset_op = {}
+
+    # Always remove from attempted
+    unset_op[f'attempted.{problem_id}'] = ""
+
+    if new_status == "accepted":
+        set_op[f'solved.{problem_id}'] = timestamp
+        unset_op[f'not_solved.{problem_id}'] = ""
+    else:
+        was_solved = problem_id in user.get('solved', {})
+        if not was_solved:
+            set_op[f'not_solved.{problem_id}'] = timestamp
+            unset_op[f'solved.{problem_id}'] = ""
+
+    update_doc = {}
+    if set_op:
+        update_doc["$set"] = set_op
+    if unset_op:
+        update_doc["$unset"] = unset_op
+
     if not update_doc:
         return True, None # No changes needed
 
