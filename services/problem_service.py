@@ -2,8 +2,7 @@ import json
 import re
 from services.github_services import get_file, create_or_update_file, add_file
 from config.github_config import GITHUB_PROBLEMS_BASE_PATH
-
-
+from extensions import mongo
 
 def _validate_problem_md(description):
     """
@@ -133,3 +132,29 @@ def add_problem(problem_data):
         return {"error": f"Failed to update index.json: {update_index_result['message']}"}
 
     return {"message": "Problem added successfully", "problem_id": new_problem_id}
+
+def get_all_problems_metadata():
+    try:
+        problems_cursor = mongo.db.problems.find({}, {'_id': 0})
+        problems_list = list(problems_cursor)
+        return problems_list, None
+    except Exception as e:
+        return None, {"message": str(e)}
+
+def get_problem_full_details(problem_id):
+    try:
+        problem = mongo.db.problems.find_one({'id': problem_id}, {'_id': 0})
+        if problem:
+            return problem, None
+        return None, {"message": "Problem not found"}
+    except Exception as e:
+        return None, {"message": str(e)}
+
+def get_problem_by_id(problem_id):
+    try:
+        problem = mongo.db.problems.find_one({'id': problem_id}, {'_id': 0})
+        if problem:
+            return problem, None
+        return None, {"message": "Problem not found"}
+    except Exception as e:
+        return None, {"message": str(e)}

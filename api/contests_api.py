@@ -7,7 +7,7 @@ from functools import wraps
 from datetime import datetime
 import pytz
 
-contests_api = Blueprint('contests_api', __name__)
+contests_bp = Blueprint('contests_bp', __name__)
 
 def token_required(f):
     @wraps(f)
@@ -27,7 +27,7 @@ def token_required(f):
         return f(current_user, *args, **kwargs)
     return decorated
 
-@contests_api.route('/', methods=['GET'])
+@contests_bp.route('/', methods=['GET'])
 @token_required
 def get_contests(current_user):
     contests_metadata, error = contest_service.get_all_contests_metadata()
@@ -54,7 +54,7 @@ def get_contests(current_user):
 
     return jsonify(filtered_contests)
 
-@contests_api.route('/<contest_id>', methods=['GET'])
+@contests_bp.route('/<contest_id>', methods=['GET'])
 @token_required
 def get_contest(current_user, contest_id):
     contest_data, error = contest_service.get_contest_details(contest_id)
@@ -69,7 +69,7 @@ def get_contest(current_user, contest_id):
 
     return jsonify({'status': 'started', 'data': contest_data}), 200
 
-@contests_api.route('/<contest_id>/is-registered', methods=['GET'])
+@contests_bp.route('/<contest_id>/is-registered', methods=['GET'])
 @token_required
 def check_contest_registration(current_user, contest_id):
     user_id = current_user['user_id']
@@ -78,7 +78,7 @@ def check_contest_registration(current_user, contest_id):
         return jsonify(error), 500
     return jsonify({"is_registered": is_registered}), 200
 
-@contests_api.route('/<contest_id>/register', methods=['POST'])
+@contests_bp.route('/<contest_id>/register', methods=['POST'])
 @token_required
 def register_for_contest(current_user, contest_id):
     user_id = current_user['user_id']
@@ -87,7 +87,7 @@ def register_for_contest(current_user, contest_id):
         return jsonify(error), 500
     return jsonify({"message": "Successfully registered for the contest."}), 200
 
-@contests_api.route('/<contest_id>/leaderboard', methods=['GET'])
+@contests_bp.route('/<contest_id>/leaderboard', methods=['GET'])
 @token_required
 def get_contest_leaderboard_api(current_user, contest_id):
     leaderboard, error = contest_service.get_contest_leaderboard(contest_id)

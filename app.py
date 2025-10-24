@@ -5,11 +5,9 @@ import os
 from extensions import mail, mongo
 from flask_mail import Message
 
-# from api.problems_api import problems_bp
-# from api.users_api import users_bp
+from api.problems_api import problems_bp
 from api.auth_api import auth_bp
-# from api.submissions_api import submissions_bp
-# from api.contests_api import contests_api
+from api.contests_api import contests_bp
 
 def create_app():
     # import loggingme='app.log', level=logging.DEBUG)
@@ -33,11 +31,9 @@ def create_app():
     app.config["MONGO_URI"] = os.getenv("MONGO_URI")
     mongo.init_app(app)
 
-    # app.register_blueprint(problems_bp, url_prefix='/api/problems')
-    # app.register_blueprint(users_bp, url_prefix='/api/users')
+    app.register_blueprint(problems_bp, url_prefix='/api/problems')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    # app.register_blueprint(submissions_bp, url_prefix='/api/submissions')
-    # app.register_blueprint(contests_api, url_prefix='/api/contests')
+    app.register_blueprint(contests_bp, url_prefix='/api/contests')
 
     @app.route("/")
     def root():

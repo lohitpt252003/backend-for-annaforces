@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from services import problem_service, submission_service, judge_service
+from services import problem_service, submission_service
 from utils.jwt_token import validate_token
 from functools import wraps
 
@@ -82,12 +82,11 @@ def submit_problem(current_user, problem_id):
     if not code or not language:
         return jsonify({'error': 'Code and language are required.'}), 400
 
-    submission = submission_service.handle_new_submission(problem_id, current_user['username'], language, code)
+    # Call the minimal submission service
+    result = submission_service.handle_new_submission(problem_id, current_user['username'], language, code)
 
-    if 'error' in submission:
-        return jsonify({'error': submission['error']}), 500
+    return jsonify(result), 200
 
-    return jsonify(submission), 201
 @problems_bp.route('/<problem_id>/meta', methods=['GET'])
 @token_required
 def get_problem_meta_by_id(current_user, problem_id):
@@ -96,11 +95,3 @@ def get_problem_meta_by_id(current_user, problem_id):
         return jsonify(error), 404
     
     return jsonify(problem), 200
-
-@problems_bp.route('/<problem_id>/testcases', methods=['GET'])
-@token_required
-def get_problem_testcases(current_user, problem_id):
-    testcases = judge_service.get_testcases(problem_id)
-    if not testcases:
-        return jsonify({"error": "No testcases found for this problem."}), 404
-    return jsonify({"testcases": testcases}), 200
