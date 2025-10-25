@@ -64,10 +64,49 @@ def get_all_problems_metadata():
 
 def get_problem_full_details(problem_id):
     try:
-        problem = mongo.db.problems.find_one({'id': problem_id}, {'_id': 0})
-        if problem:
-            return problem, None
-        return None, {"message": "Problem not found"}
+        # Extract contest_id and problem_letter from problem_id (e.g., C1A -> C1, A)
+        match = re.match(r"(C\d+)([A-Z]+)", problem_id)
+        if not match:
+            return None, {"message": "Invalid problem ID format"}
+        
+        contest_id = match.group(1)
+        problem_letter = match.group(2)
+
+        base_path = f"data/contests/{contest_id}/problems/{problem_letter}"
+
+        # Fetch meta.json
+        meta_file_path = f"{base_path}/meta.json"
+        meta_content, _, error = get_file(meta_file_path)
+        if error:
+            return None, {"message": f"Problem meta.json not found for {problem_id}"}
+        meta_data = json.loads(meta_content)
+
+        # Fetch problem.md (problem statement)
+        problem_md_path = f"{base_path}/problem.md"
+        problem_statement, _, error = get_file(problem_md_path)
+        if error:
+            problem_statement = "No problem statement available."
+
+        # Fetch samples.json
+        samples_json_path = f"{base_path}/samples.json"
+        samples_content, _, error = get_file(samples_json_path)
+        samples_data = []
+        if not error:
+            samples_data = json.loads(samples_content)
+
+        # Check for PDF statement
+        pdf_statement_path = f"{base_path}/statement.pdf"
+        pdf_statement_exists, _, _ = get_file(pdf_statement_path)
+        has_pdf_statement = pdf_statement_exists is not None
+
+        full_problem_details = {
+            "meta": meta_data,
+            "problem_statement": problem_statement,
+            "samples_data": samples_data,
+            "has_pdf_statement": has_pdf_statement,
+        }
+
+        return full_problem_details, None
     except Exception as e:
         return None, {"message": str(e)}
 
