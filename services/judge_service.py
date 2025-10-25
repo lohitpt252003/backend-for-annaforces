@@ -136,10 +136,8 @@ def grade_submission(code, language, problem_id):
         if validator_error:
             return {"overall_status": "error", "message": f"Failed to get validator.py: {validator_error['message']}"}
 
-        # Write validator content to a temporary file
-        with open("temp_validator.py", "w") as f:
-            f.write(validator_content)
 
+        
         for i, testcase in enumerate(testcases):
             print(SIZE * '=' + f' Running testcase {i + 1}! ' + '=' * SIZE)
             stdin = testcase.get('stdin', '') # Assuming 'stdin' field in testcase from GitHub
@@ -174,20 +172,29 @@ def grade_submission(code, language, problem_id):
                     test_status = "runtime_error"
                     message = f"Runtime Error: {stderr}"
             else:
-                # Create a temporary file for the input
-                with open("temp_input.txt", "w") as f:
-                    f.write(stdin)
+                # Validate the output using the validation service
+                validation_url = "http://localhost:5002/api/validate"
+                validation_payload = {
+                    "validator_language": "python",
+                    "validator_code": validator_content,
+                    "user_output": stdout,
+                    "test_input": stdin
+                }
+                headers = {'Content-Type': 'application/json'}
                 
-                # Run validator
-                process = subprocess.run(
-                    ["python", "temp_validator.py", stdout, "temp_input.txt"],
-                    capture_output=True,
-                    text=True
-                )
-                verdict = process.stdout.strip()
-                if verdict != "Accepted":
-                    test_status = "wrong_answer"
-                    message = "Output mismatch"
+                try:
+                    validation_response = requests.post(validation_url, data=json.dumps(validation_payload), headers=headers)
+                    validation_response.raise_for_status()
+                    validation_result = validation_response.json()
+                    
+                    verdict = validation_result.get("stdout", "").strip()
+                    if verdict != "Accepted":
+                        test_status = "wrong_answer"
+                        message = "Output mismatch"
+                        
+                except requests.exceptions.RequestException as e:
+                    test_status = "runtime_error"
+                    message = f"Validator service error: {e}"
             
             print(f"[Grade Submission] Determined test_status: {test_status}")
             result["status"] = test_status
@@ -195,8 +202,6 @@ def grade_submission(code, language, problem_id):
             print(f"[Grade Submission] Appending result: {result}")
             all_test_results.append(result)
         
-        # Clean up temporary validator file
-        os.remove("temp_validator.py")
         return all_test_results
 
     except Exception as e:
