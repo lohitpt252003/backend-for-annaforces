@@ -8,6 +8,8 @@ from flask_mail import Message
 from api.problems_api import problems_bp
 from api.auth_api import auth_bp
 from api.contests_api import contests_bp
+from api.submissions_api import submissions_bp
+from services import submission_service
 
 def create_app():
     # import loggingme='app.log', level=logging.DEBUG)
@@ -31,9 +33,12 @@ def create_app():
     app.config["MONGO_URI"] = os.getenv("MONGO_URI")
     mongo.init_app(app)
 
+    submission_service.init_app(app)
+
     app.register_blueprint(problems_bp, url_prefix='/api/problems')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(contests_bp, url_prefix='/api/contests')
+    app.register_blueprint(submissions_bp, url_prefix='/api/submissions')
 
     @app.route("/")
     def root():

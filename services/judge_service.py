@@ -7,6 +7,7 @@ import subprocess
 
 load_dotenv()
 
+from extensions import mongo
 from services.github_services import get_file, get_folder_contents
 from services import problem_service
 
@@ -88,7 +89,7 @@ def _execute_testcase(code, language, stdin, time_limit_s, memory_limit_mb):
 
 import subprocess
 
-def grade_submission(code, language, problem_id):
+def grade_submission(submission_id, code, language, problem_id):
     """
     Grades a submission by running it against all test cases for a given problem.
     This function returns a list of results for each test case.
@@ -139,6 +140,10 @@ def grade_submission(code, language, problem_id):
 
         
         for i, testcase in enumerate(testcases):
+            mongo.db.submissions_queue.update_one(
+                {"_id": submission_id},
+                {"$set": {"status": f"running test case {i + 1}"}}
+            )
             print(SIZE * '=' + f' Running testcase {i + 1}! ' + '=' * SIZE)
             stdin = testcase.get('stdin', '') # Assuming 'stdin' field in testcase from GitHub
             
