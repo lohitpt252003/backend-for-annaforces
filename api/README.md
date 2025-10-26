@@ -2,197 +2,581 @@
 
 This document provides an overview of the available APIs.
 
-**Note:** The data structure for problems has been updated. Problems are now located inside their respective contest's directory, and the `problem_id` is in the format `C<contest_id><problem_letter>` (e.g., `C0A`, `C1C`, `C1000F`). If there are more than 26 problems in a contest, the problem letters will continue as `AA`, `AB`, etc. (e.g., `C1AA`, `C1AB`). The API implementation needs to be updated to reflect these changes.
+## Authentication API (`auth_bp`)
 
-## Problems API
+**Base URL Prefix:** `/api/auth`
 
-**Endpoint:** `/api/problems`
+### `POST /api/auth/login`
 
-**Method:** `GET`
-
-**Description:** Retrieves a list of all problems. Requires a valid JWT in the Authorization header.
-
-**Authorization Header:**
-
-`Authorization: Bearer <your_jwt_token>`
-
-**Success Response:**
-
-- **Code:** 200 OK
-- **Content:**
-
+**Description:** Handles user authentication. Expects `username` and `password` in the request body. Returns a JWT token on success.
+**Request Body:**
 ```json
 {
-  "C0A": {
-    "title": "Binary Divisibility",
-    "difficulty": "Easy",
-    "tags": ["easy", "math", "binary"],
-    "authors": ["Admin"]
-  },
-  "C0B": {
-    "title": "A recursive Algorithm",
-    "difficulty": "Easy",
-    "tags": ["math", "recursion"],
-    "authors": ["Lohit", "Sriramchandher"]
-  }
+  "username": "testuser",
+  "password": "password123"
 }
 ```
-
-**Error Response:**
-
-- **Code:** 401 Unauthorized (if token is missing or invalid), 500 Internal Server Error
-- **Content:**
-
+**Success Response (200 OK):**
+```json
+{
+  "message": "Login successful",
+  "username": "testuser",
+  "name": "Test User",
+  "token": "<JWT>"
+}
+```
+**Error Response (400, 401, 500):**
 ```json
 {
   "error": "<error message>"
 }
 ```
 
-**Endpoint:** `/api/problems/<problem_id>`
+### `POST /api/auth/google-signin`
 
-**Method:** `GET`
-
-**Description:** Retrieves a specific problem by its ID. The `problem_id` must be in the format `C<contest_id><problem_letter>` (e.g., `C0A`, `C1C`, `C1000F`).
-
-**URL Parameters:**
-
-- `problem_id`: The ID of the problem to retrieve.
-
-**Success Response:**
-
-- **Code:** 200 OK
-- **Content:**
-
+**Description:** Handles Google Sign-In by verifying the Google ID token.
+**Request Body:**
 ```json
 {
-  "meta": {
-    "id": "C0A",
-    "memoryLimit": 256,
-    "number_of_submissions": 2,
-    "timeLimit": 2000,
-    "title": "Binary Divisibility",
-    "tags": ["easy", "math", "binary"],
-    "authors": ["Admin"],
-    "difficulty": "Easy",
-    "contest_id": "C0"
+  "id_token": "<Google ID Token>"
+}
+```
+**Success Response (200 OK):**
+```json
+{
+  "message": "Google sign-in successful",
+  "username": "<Google Email>",
+  "name": "<Google Display Name>",
+  "token": "<JWT>"
+}
+```
+**Error Response (400, 401, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### `POST /api/auth/signup`
+
+**Description:** Initiates user registration by sending an OTP to the provided email.
+**Request Body:**
+```json
+{
+  "username": "new_username",
+  "password": "secure_password",
+  "name": "New User",
+  "email": "user@example.com"
+}
+```
+**Success Response (200 OK):**
+```json
+{
+  "message": "OTP has been sent to your email. Please verify to complete registration."
+}
+```
+**Error Response (400, 409, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### `POST /api/auth/verify-otp`
+
+**Description:** Verifies the OTP sent during signup.
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "otp": "123456"
+}
+```
+**Success Response (201 Created):**
+```json
+{
+  "message": "Email verified and user registered successfully!",
+  "username": "new_username"
+}
+```
+**Error Response (400):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### `POST /api/auth/forgot-userid`
+
+**Description:** Sends an email with the username if the email exists. Returns a generic message to prevent enumeration.
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+**Success Response (200 OK):**
+```json
+{
+  "message": "If a user with that email exists, a reminder has been sent."
+}
+```
+**Error Response (400, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### `POST /api/auth/request-password-reset`
+
+**Description:** Initiates password reset by sending an OTP.
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+**Success Response (200 OK):**
+```json
+{
+  "message": "If a user with that email exists, an OTP has been sent."
+}
+```
+**Error Response (400, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### `POST /api/auth/verify-password-reset-otp`
+
+**Description:** Verifies OTP and allows setting a new password.
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "otp": "123456",
+  "new_password": "new_secure_password"
+}
+```
+**Success Response (200 OK):**
+```json
+{
+  "message": "Password has been reset successfully."
+}
+```
+**Error Response (400, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### `GET /api/auth/<username>/submissions`
+
+**Description:** Retrieves all submissions for a specific user directly from MongoDB.
+**URL Parameters:**
+- `username`: The username of the user.
+**Authentication:** Required (JWT token).
+**Success Response (200 OK):**
+```json
+[
+  {
+    "submission_id": "S1",
+    "problem_id": "P1",
+    "username": "testuser",
+    "language": "python",
+    "status": "Accepted",
+    "timestamp": 1678886400,
+    "test_results": [...]
+  }
+]
+```
+**Error Response (401, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+## Problems API (`problems_bp`)
+
+**Base URL Prefix:** `/api/problems`
+
+### `GET /api/problems`
+
+**Description:** Retrieves a list of all problems with filtering capabilities.
+**Authentication:** Required (JWT token).
+**Query Parameters:** `search`, `difficulty`, `tag`.
+**Success Response (200 OK):**
+```json
+{
+  "problems": {
+    "C0A": { ... },
+    "C0B": { ... }
   },
+  "total_problems": 2
+}
+```
+**Error Response (401, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### `GET /api/problems/<problem_id>`
+
+**Description:** Retrieves a specific problem by its ID. Includes problem statement, samples, and PDF availability.
+**URL Parameters:**
+- `problem_id`: The ID of the problem (e.g., `C1A`).
+**Authentication:** Required (JWT token).
+**Success Response (200 OK):**
+```json
+{
+  "meta": { ... },
   "problem_statement": "<problem statement in markdown>",
-  "constraints_content": "<problem constraints in markdown>",
+  "samples_data": [...],
   "has_pdf_statement": true
 }
 ```
-
-**Error Response:**
-
-- **Code:** 404 Not Found (if problem not found), 500 Internal Server Error
-- **Content:**
-
+**Special Response (200 OK):** If the associated contest has not started.
+```json
+{
+  "message": "Contest has not started yet"
+}
+```
+**Error Response (404, 500):**
 ```json
 {
   "error": "<error message>"
 }
 ```
 
-**Endpoint:** `/api/problems/<problem_id>/submit`
+### `POST /api/problems/<problem_id>/submit`
 
-**Method:** `POST`
-
-**Description:** Submits code for a specific problem. Requires a valid JWT in the Authorization header.
-
+**Description:** Submits code for a specific problem.
 **URL Parameters:**
-
-- `problem_id`: The ID of the problem to submit code for.
-
-**Authorization Header:**
-
-`Authorization: Bearer <your_jwt_token>`
-
+- `problem_id`: The ID of the problem.
+**Authentication:** Required (JWT token).
 **Request Body:**
-
 ```json
 {
   "language": "python",
   "code": "print('Hello World')"
 }
 ```
-
-**Success Response:**
-
-- **Code:** 201 Created
-- **Content:**
-
+**Success Response (200 OK):**
 ```json
 {
   "message": "Submission received and is being processed.",
   "submission_id": "S1"
 }
 ```
-
-**Error Response:**
-
-- **Code:** 400 Bad Request (if code or language is missing), 401 Unauthorized, 500 Internal Server Error
-- **Content:**
-
+**Error Response (400, 401, 500):**
 ```json
 {
   "error": "<error message>"
 }
 ```
 
-**Endpoint:** `/api/problems/<problem_id>/testcases`
+### `GET /api/problems/<problem_id>/submissions`
 
-**Method:** `GET`
-
-**Description:** Retrieves all test cases for a specific problem. Requires a valid JWT in the Authorization header.
-
+**Description:** Retrieves all submissions for a specific problem directly from MongoDB.
 **URL Parameters:**
+- `problem_id`: The ID of the problem.
+**Authentication:** Required (JWT token).
+**Success Response (200 OK):**
+```json
+[
+  {
+    "submission_id": "S1",
+    "problem_id": "P1",
+    "username": "testuser",
+    "language": "python",
+    "status": "Accepted",
+    "timestamp": 1678886400,
+    "test_results": [...]
+  }
+]
+```
+**Error Response (401, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
 
-- `problem_id`: The ID of the problem to retrieve test cases for.
+### `GET /api/problems/<problem_id>/meta`
 
-**Authorization Header:**
+**Description:** Retrieves only the metadata for a specific problem.
+**URL Parameters:**
+- `problem_id`: The ID of the problem.
+**Authentication:** Required (JWT token).
+**Success Response (200 OK):**
+```json
+{
+  "id": "C1A",
+  "memoryLimit": 256,
+  "timeLimit": 2000,
+  "title": "Binary Divisibility",
+  "tags": ["easy", "math", "binary"],
+  "authors": ["Admin"],
+  "difficulty": "Easy",
+  "contest_id": "C0"
+}
+```
+**Error Response (404, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
 
-`Authorization: Bearer <your_jwt_token>`
+### `GET /api/problems/<problem_id>/statement.pdf`
 
-**Success Response:**
+**Description:** Returns the base64 encoded PDF data for the problem statement.
+**URL Parameters:**
+- `problem_id`: The ID of the problem.
+**Authentication:** Required (JWT token).
+**Success Response (200 OK):**
+```json
+{
+  "pdf_data": "<base64 encoded PDF>"
+}
+```
+**Error Response (404, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
 
-- **Code:** 200 OK
-- **Content:**
+### `GET /api/problems/<problem_id>/solution.pdf`
 
+**Description:** Returns the base64 encoded PDF data for the problem solution.
+**URL Parameters:**
+- `problem_id`: The ID of the problem.
+**Authentication:** Required (JWT token).
+**Success Response (200 OK):**
+```json
+{
+  "pdf_data": "<base64 encoded PDF>"
+}
+```
+**Error Response (404, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### `GET /api/problems/<problem_id>/testcases`
+
+**Description:** Retrieves all test cases for a specific problem.
+**URL Parameters:**
+- `problem_id`: The ID of the problem.
+**Authentication:** Required (JWT token).
+**Success Response (200 OK):**
 ```json
 {
   "testcases": [
     {
       "stdin": "input for test case 1",
       "path": "path/to/testcase1.in"
-    },
-    {
-      "stdin": "input for test case 2",
-      "path": "path/to/testcase2.in"
     }
   ]
 }
 ```
-
-**Error Response:**
-
-- **Code:** 404 Not Found, 500 Internal Server Error
-- **Content:**
-
+**Error Response (404, 500):**
 ```json
 {
   "error": "<error message>"
 }
 ```
 
-## Submissions API
+## Submissions API (`submissions_bp`)
 
-(No changes needed for this API at the moment)
+**Base URL Prefix:** `/api/submissions`
 
-## Contests API
+### `GET /api/submissions/queue`
 
-(No changes needed for this API at the moment)
+**Description:** Retrieves all submissions currently in the processing queue.
+**Authentication:** Required (JWT token).
+**Success Response (200 OK):**
+```json
+[
+  {
+    "problem_id": "C1A",
+    "username": "testuser",
+    "language": "python",
+    "code": "print('hello')",
+    "status": "running test case 1",
+    "created_at": 1678886400
+  }
+]
+```
+**Error Response (401, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
 
-## Users API
+### `GET /api/submissions/<submission_id>`
 
-(No changes needed for this API at the moment)
+**Description:** Retrieves detailed information about a specific submission from MongoDB.
+**URL Parameters:**
+- `submission_id`: The ID of the submission.
+**Authentication:** Required (JWT token).
+**Success Response (200 OK):**
+```json
+{
+  "submission_id": "S1",
+  "problem_id": "P1",
+  "username": "testuser",
+  "language": "python",
+  "status": "Accepted",
+  "timestamp": 1678886400,
+  "test_results": [...]
+}
+```
+**Error Response (401, 404, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+## Contests API (`contests_bp`)
+
+**Base URL Prefix:** `/api/contests`
+
+### `GET /api/contests/`
+
+**Description:** Retrieves a list of all contests from MongoDB with filtering capabilities.
+**Authentication:** Required (JWT token).
+**Query Parameters:** `search`, `author`.
+**Success Response (200 OK):**
+```json
+[
+  {
+    "id": "C1",
+    "name": "Genesis Contest",
+    "description": "...",
+    "startTime": "...",
+    "endTime": "...",
+    "authors": ["..."],
+    "problems": ["..."],
+    "participants": ["..."],
+    "status_info": {
+      "status": "Upcoming",
+      "timeInfo": "Starts in: 5d 10h 30m 15s",
+      "progress": 0
+    }
+  }
+]
+```
+**Error Response (401, 404, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### `GET /api/contests/<contest_id>`
+
+**Description:** Retrieves detailed information about a specific contest from MongoDB, including its status.
+**URL Parameters:**
+- `contest_id`: The ID of the contest.
+**Authentication:** Required (JWT token).
+**Success Response (200 OK):**
+```json
+{
+  "id": "C1",
+  "name": "Genesis Contest",
+  "description": "...",
+  "startTime": "...",
+  "endTime": "...",
+  "authors": ["..."],
+  "problems": ["..."],
+  "participants": ["..."],
+  "contest_description": "<markdown content>",
+  "contest_theory": "<markdown content>",
+  "status_info": {
+    "status": "Running",
+    "timeInfo": "Ends in: 1d 5h 20m 30s",
+    "progress": 50
+  }
+}
+```
+**Error Response (401, 404, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### `GET /api/contests/<contest_id>/meta`
+
+**Description:** Retrieves only the metadata for a specific contest from MongoDB.
+**URL Parameters:**
+- `contest_id`: The ID of the contest.
+**Authentication:** Required (JWT token).
+**Success Response (200 OK):**
+```json
+{
+  "id": "C1",
+  "name": "Genesis Contest",
+  "startTime": "...",
+  "endTime": "...",
+  "authors": ["..."],
+  "problems": ["..."]
+}
+```
+**Error Response (401, 404, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### `GET /api/contests/<contest_id>/is-registered`
+
+**Description:** Checks if the current user is registered for a specific contest.
+**URL Parameters:**
+- `contest_id`: The ID of the contest.
+**Authentication:** Required (JWT token).
+**Success Response (200 OK):**
+```json
+{
+  "is_registered": true
+}
+```
+**Error Response (401, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```
+
+### `POST /api/contests/<contest_id>/register`
+
+**Description:** Registers the current user for a specific contest.
+**URL Parameters:**
+- `contest_id`: The ID of the contest.
+**Authentication:** Required (JWT token).
+**Success Response (200 OK):**
+```json
+{
+  "message": "Successfully registered for the contest."
+}
+```
+**Error Response (401, 500):**
+```json
+{
+  "error": "<error message>"
+}
+```

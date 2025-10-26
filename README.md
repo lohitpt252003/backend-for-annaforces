@@ -22,6 +22,8 @@ The `services/github_services.py` file provides a set of functions to interact w
 
 **Write Operation Queue:** To prevent race conditions and data corruption from concurrent writes, all file creation and update operations are funneled through a simple in-memory queue. A dedicated background thread processes this queue, ensuring that all write operations to the GitHub repository are executed sequentially. This makes the system more robust in a single-instance deployment.
 
+**Read Operation Caching:** Implemented a caching layer for read operations (`get_file`, `get_folder_contents`) to reduce redundant GitHub API calls and improve performance. The cache can be explicitly invalidated.
+
 ### OTP and Email Service
 
 The `services/email_service.py` module handles OTP generation and sending via email using Flask-Mail. This is primarily used for user email verification during registration, sending welcome emails, user ID reminders, and password reset OTPs.
@@ -72,7 +74,7 @@ During the grading process, the `judge_service` provides real-time status update
 
 The `services/judge_service.py` is responsible for evaluating submitted code. It now accepts a `submission_id` in its `grade_submission` function to facilitate live status updates.
 
-For each test case, the `judge_service` first calls the `/api/execute` endpoint on the executor service. If the code runs successfully, it then calls the `/api/validate` endpoint on the same service, passing the validator code, the user's output, and the test case input to get a verdict. The validator code is read from the `validator.py` file within the problem's directory in the `DATA` repository. This verdict is then used to determine the status of the test case.
+For each test case, the `judge_service` first calls the `/api/execute` endpoint on the executor service. If the code runs successfully, it then calls the `/api/validate` endpoint on the same service, passing the validator code, the user's output, and the test case input to get a verdict. The validator code is read from the `validator.py` file within the problem's directory in the `DATA` repository. This verdict is then then used to determine the status of the test case.
 
 ### Problem Service
 
@@ -104,7 +106,29 @@ Recent updates have focused on improving the security posture of the backend. Ke
 
 These measures contribute to a more robust and secure application.
 
-## Recent Bug Fixes
+## Recent Bug Fixes and Enhancements
+
+-   **API Endpoint Refactoring:**
+    -   `/api/auth/<username>/submissions`: New endpoint added to `auth_api.py` for fetching user submissions directly from MongoDB.
+    -   `/api/problems/<problem_id>/submissions`: New endpoint added to `problems_api.py` for fetching problem submissions directly from MongoDB.
+    -   `/api/submissions/<submission_id>`: New endpoint added to `submissions_api.py` for fetching single submission details directly from MongoDB.
+    -   `/api/submissions/queue`: URL prefix changed from `/submissions` back to `/api/submissions` in `app.py`.
+    -   `/api/contests`: `get_all_contests_metadata` in `contest_service.py` now fetches from MongoDB.
+    -   `/api/contests/<contest_id>`: `get_contest_details` in `contest_service.py` now fetches from MongoDB and includes `status_info` (Upcoming, Running, Over). `get_contest` in `contests_api.py` now returns this directly.
+    -   `/api/contests/<contest_id>/meta`: New endpoint added to `contests_api.py` for fetching contest metadata directly from MongoDB.
+
+-   **Contest Status Logic:** Implemented robust logic in `contest_service.py` to determine and return the status of a contest (Upcoming, Running, Over) based on `startTime` and `endTime`.
+
+-   **Leaderboard Removal:** The leaderboard API endpoint and all associated frontend components have been removed.
+
+-   **Problem Details Consolidation:** The `/api/problems/<problem_id>` endpoint now consolidates all problem description elements (input, output, constraints, notes) into a single `problem_statement` field, removing separate fields from the API response.
+
+-   **Bug Fixes:**
+    -   `NameError: name 'mongo' is not defined` in `problems_api.py` and `submissions_api.py` fixed by importing `mongo`.
+    -   `AttributeError: module 'services.submission_service' has no attribute 'get_submissions_queue'` fixed by adding `get_submissions_queue` to `submission_service.py`.
+    -   `time data does not match format` error in `contest_service.py` fixed by updating `strptime` format to include microseconds.
+    -   `NameError: name 'pytz' is not defined` in `contest_service.py` fixed by importing `pytz`.
+    -   Caching issue for `meta.json` in `contest_service.py` fixed by adding `force_refresh=True` to `get_file`.
 
 - **Submission Process:**
   - Fixed a critical bug where the `language` and `code` arguments were swapped during the submission process, leading to incorrect storage of submission details.

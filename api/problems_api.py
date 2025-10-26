@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify, request
-from services import problem_service, submission_service
+from services import problem_service, submission_service, contest_service
 from utils.jwt_token import validate_token
 from functools import wraps
+from extensions import mongo
 
 problems_bp = Blueprint("problems", __name__)
 
@@ -69,6 +70,8 @@ def get_problems(current_user):
 def get_problem_by_id(current_user, problem_id):
     problem, error = problem_service.get_problem_full_details(problem_id)
     if error:
+        if error.get("error_type") == "contest_not_started":
+            return jsonify({"message": error["message"]}), 200
         return jsonify(error), 404
     return jsonify(problem), 200
 
@@ -86,6 +89,26 @@ def submit_problem(current_user, problem_id):
     result = submission_service.handle_new_submission(problem_id, current_user['username'], language, code)
 
     return jsonify(result), 200
+
+@problems_bp.route('/<problem_id>/submissions', methods=['GET'])
+@token_required
+def get_problem_submissions(current_user, problem_id):
+    problem, error = problem_service.get_problem_by_id(problem_id)
+    if error:
+        return jsonify(error), 404
+
+    contest_id = problem.get('contest_id')
+    if contest_id:
+        contest, error = contest_service.get_contest_details(contest_id)
+        if error:
+            return jsonify(error), 404
+
+        if contest.get('status_info', {}).get('status') == 'Running':
+            problem_submissions = list(mongo.db.submissions.find({"problem_id": problem_id, "username": current_user['username']}, {'_id': 0}))
+            return jsonify(problem_submissions), 200
+
+    problem_submissions = list(mongo.db.submissions.find({"problem_id": problem_id}, {'_id': 0}))
+    return jsonify(problem_submissions), 200
 
 @problems_bp.route('/<problem_id>/meta', methods=['GET'])
 @token_required

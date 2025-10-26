@@ -1,6 +1,9 @@
 import json
 import re
 from services.github_services import get_file, create_or_update_file, add_file
+from services import contest_service
+from datetime import datetime
+import pytz
 # from config.github_config import GITHUB_PROBLEMS_BASE_PATH
 from extensions import mongo
 
@@ -71,6 +74,21 @@ def get_problem_full_details(problem_id):
         
         contest_id = match.group(1)
         problem_letter = match.group(2)
+
+        # Check if contest has started
+        contest_data, contest_error = contest_service.get_contest_details(contest_id)
+        if contest_error:
+            print(f"Error fetching contest details: {contest_error}")
+            return None, {"message": f"Contest {contest_id} not found for problem {problem_id}"}
+
+        start_time_str = contest_data.get('startTime')
+        if start_time_str:
+            start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=pytz.UTC)
+            current_time = datetime.now(pytz.UTC)
+            print(f"Contest ID: {contest_id}, Start Time: {start_time}, Current Time: {current_time}")
+            if current_time < start_time:
+                print(f"Contest {contest_id} has not started yet.")
+                return None, {"message": "Contest has not started yet", "error_type": "contest_not_started"}
 
         base_path = f"data/contests/{contest_id}/problems/{problem_letter}"
 
