@@ -50,18 +50,24 @@ def grading_task(submission):
         test_results = []
     else:
         test_results = grading_results
-        verdicts = [result["status"] for result in test_results if "status" in result]
-        final_status = "accepted"
-        if "compilation_error" in verdicts:
-            final_status = "compilation_error"
-        elif "runtime_error" in verdicts:
-            final_status = "runtime_error"
-        elif "time_limit_exceeded" in verdicts:
-            final_status = "time_limit_exceeded"
-        elif "memory_limit_exceeded" in verdicts:
-            final_status = "memory_limit_exceeded"
-        elif "wrong_answer" in verdicts:
-            final_status = "wrong_answer"
+        has_error = any(result.get("overall_status") == "error" for result in test_results)
+        if has_error:
+            final_status = "error"
+        else:
+            verdicts = [result["status"] for result in test_results if "status" in result]
+            final_status = "accepted"
+            if "compilation_error" in verdicts:
+                final_status = "compilation_error"
+            elif "runtime_error" in verdicts:
+                final_status = "runtime_error"
+            elif "time_limit_exceeded" in verdicts:
+                final_status = "time_limit_exceeded"
+            elif "memory_limit_exceeded" in verdicts:
+                final_status = "memory_limit_exceeded"
+            elif "wrong_answer" in verdicts:
+                final_status = "wrong_answer"
+        print(f"has_error: {has_error}")
+        print(f"final_status: {final_status}")
 
     submission_id_str = str(submission['_id'])
     

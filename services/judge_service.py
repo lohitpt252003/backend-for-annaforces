@@ -1,3 +1,4 @@
+import time
 import os
 import json
 import re
@@ -80,7 +81,7 @@ def _execute_testcase(code, language, stdin, time_limit_s, memory_limit_mb):
         'Content-Type': 'application/json'
     }
     try:
-        response = requests.post(url, data=json.dumps(payload), headers=headers)
+        response = requests.post(url, data=json.dumps(payload), headers=headers, timeout=30)
         response.raise_for_status()
         return response.json(), None
     except requests.exceptions.RequestException as e:
@@ -163,6 +164,7 @@ def grade_submission(submission_id, code, language, problem_id):
             test_status = "passed"
             message = "Test case passed"
 
+            # print("BEFORE err")
             if err:
                 if "Compilation Error" in err:
                     test_status = "compilation_error"
@@ -177,6 +179,7 @@ def grade_submission(submission_id, code, language, problem_id):
                     test_status = "runtime_error"
                     message = f"Runtime Error: {stderr}"
             else:
+                # print("NOW NO ERR")
                 # Validate the output using the validation service
                 validation_url = "http://localhost:5002/api/validate"
                 validation_payload = {
@@ -188,11 +191,12 @@ def grade_submission(submission_id, code, language, problem_id):
                 headers = {'Content-Type': 'application/json'}
                 
                 try:
-                    validation_response = requests.post(validation_url, data=json.dumps(validation_payload), headers=headers)
+                    validation_response = requests.post(validation_url, data=json.dumps(validation_payload), headers=headers, timeout=30)
                     validation_response.raise_for_status()
                     validation_result = validation_response.json()
                     
                     verdict = validation_result.get("stdout", "").strip()
+                    print(f"The verdict is {verdict}")
                     if verdict != "Accepted":
                         test_status = "wrong_answer"
                         message = "Output mismatch"
@@ -204,6 +208,7 @@ def grade_submission(submission_id, code, language, problem_id):
             print(f"[Grade Submission] Determined test_status: {test_status}")
             result["status"] = test_status
             result["message"] = message
+            result["stdin"] = stdin
             print(f"[Grade Submission] Appending result: {result}")
             all_test_results.append(result)
         

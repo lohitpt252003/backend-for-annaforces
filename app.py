@@ -13,7 +13,8 @@ from api.users_api import users_bp
 from services import submission_service
 
 def create_app():
-    # import loggingme='app.log', level=logging.DEBUG)
+    # import logging
+    # logging.basicConfig(filename='app.log', level=logging.DEBUG)
     app = Flask(__name__)
     CORS(app)
 
