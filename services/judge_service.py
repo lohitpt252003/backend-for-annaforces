@@ -69,7 +69,7 @@ def get_testcases(problem_id):
     return testcases
 
 def _execute_testcase(code, language, stdin, time_limit_s, memory_limit_mb):
-    url = os.getenv('JUDGE_API_SERVER_URL')
+    url = os.getenv('EXECUTE_API_SERVER_URL')
     payload = {
         "language": language,
         "code": code,
@@ -181,7 +181,7 @@ def grade_submission(submission_id, code, language, problem_id):
             else:
                 # print("NOW NO ERR")
                 # Validate the output using the validation service
-                validation_url = "http://localhost:5002/api/validate"
+                validation_url = os.getenv("VALIDATOR_API_URL")
                 validation_payload = {
                     "validator_language": "python",
                     "validator_code": validator_content,
