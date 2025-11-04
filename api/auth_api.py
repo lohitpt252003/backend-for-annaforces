@@ -175,11 +175,6 @@ def verify_otp_route():
     return jsonify({"message": "Email verified and user registered successfully!", "username": username}), 201
 
 
-@auth_bp.route('/<username>/submissions', methods=['GET'])
-def get_user_submissions(username):
-    user_submissions = list(mongo.db.submissions.find({"username": username}, {'_id': 0}))
-    return jsonify(user_submissions), 200
-
 @auth_bp.route('/forgot-userid', methods=['POST'])
 def forgot_userid():
     data = request.get_json()

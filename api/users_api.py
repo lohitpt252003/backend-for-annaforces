@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from services import user_service
 from utils.jwt_token import validate_token
 from functools import wraps
+from extensions import mongo
 
 users_bp = Blueprint('users', __name__)
 
@@ -46,3 +47,23 @@ def update_profile(current_user, username):
     if error:
         return jsonify(error), 500
     return jsonify(result), 200
+
+@users_bp.route('/<username>/submissions', methods=['GET'])
+@token_required
+def get_user_submissions(current_user, username):
+    filters = {"username": username}
+    
+    problem_id = request.args.get('problem_id')
+    if problem_id:
+        filters['problem_id'] = problem_id
+        
+    status = request.args.get('status')
+    if status:
+        filters['status'] = status
+        
+    language = request.args.get('language')
+    if language:
+        filters['language'] = language
+        
+    user_submissions = list(mongo.db.submissions.find(filters, {'_id': 0}))
+    return jsonify(user_submissions), 200

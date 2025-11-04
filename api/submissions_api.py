@@ -22,6 +22,18 @@ def get_submission_by_id(submission_id):
 
     try:
         submission_data = json.loads(submission_content)
+        
+        # Fetch the code file
+        language = submission_data.get('language')
+        file_extension = {"python": "py", "c": "c", "c++": "cpp"}.get(language, "txt")
+        code_path = f"{GITHUB_SUBMISSIONS_BASE_PATH}/{submission_id}/code.{file_extension}"
+        code_content, _, code_error = get_file(code_path)
+
+        if not code_error:
+            submission_data['code'] = code_content
+        else:
+            submission_data['code'] = "Code not found."
+
         return jsonify(submission_data), 200
     except (json.JSONDecodeError, TypeError):
         return jsonify({"message": "Failed to decode submission data"}), 500

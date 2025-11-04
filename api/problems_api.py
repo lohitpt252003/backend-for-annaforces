@@ -97,6 +97,20 @@ def get_problem_submissions(current_user, problem_id):
     if error:
         return jsonify(error), 404
 
+    filters = {"problem_id": problem_id}
+    
+    username = request.args.get('username')
+    if username:
+        filters['username'] = username
+        
+    status = request.args.get('status')
+    if status:
+        filters['status'] = status
+        
+    language = request.args.get('language')
+    if language:
+        filters['language'] = language
+
     contest_id = problem.get('contest_id')
     if contest_id:
         contest, error = contest_service.get_contest_details(contest_id)
@@ -104,10 +118,9 @@ def get_problem_submissions(current_user, problem_id):
             return jsonify(error), 404
 
         if contest.get('status_info', {}).get('status') == 'Running':
-            problem_submissions = list(mongo.db.submissions.find({"problem_id": problem_id, "username": current_user['username']}, {'_id': 0}))
-            return jsonify(problem_submissions), 200
+            filters['username'] = current_user['username']
 
-    problem_submissions = list(mongo.db.submissions.find({"problem_id": problem_id}, {'_id': 0}))
+    problem_submissions = list(mongo.db.submissions.find(filters, {'_id': 0}))
     return jsonify(problem_submissions), 200
 
 @problems_bp.route('/<problem_id>/meta', methods=['GET'])
