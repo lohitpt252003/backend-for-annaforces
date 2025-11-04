@@ -1,6 +1,6 @@
 import json
 import re
-from services.github_services import get_file, create_or_update_file, add_file
+from services.github_services import get_file, create_or_update_file, add_file, get_folder_contents
 from services import contest_service
 from datetime import datetime
 import pytz
@@ -94,23 +94,43 @@ def get_problem_full_details(problem_id):
 
         # Fetch meta.json
         meta_file_path = f"{base_path}/meta.json"
-        meta_content, _, error = get_file(meta_file_path)
+        meta_content, _, error = get_file(meta_file_path, force_refresh=True)
         if error:
             return None, {"message": f"Problem meta.json not found for {problem_id}"}
         meta_data = json.loads(meta_content)
 
         # Fetch problem.md (problem statement)
         problem_md_path = f"{base_path}/problem.md"
-        problem_statement, _, error = get_file(problem_md_path)
+        problem_statement, _, error = get_file(problem_md_path, force_refresh=True)
         if error:
             problem_statement = "No problem statement available."
 
-        # Fetch samples.json
-        samples_json_path = f"{base_path}/samples.json"
-        samples_content, _, error = get_file(samples_json_path)
+        # Fetch sample test cases
+        samples_path = f"{base_path}/samples"
         samples_data = []
-        if not error:
-            samples_data = json.loads(samples_content)
+        samples_contents, error = get_folder_contents(samples_path)
+        if not error and samples_contents.get('success'):
+            for item in samples_contents.get('data', []):
+                if item['type'] == 'dir':
+                    sample_name = item['name']
+                    sample_path = f"{samples_path}/{sample_name}"
+                    
+                    input_path = f"{sample_path}/input.md"
+                    output_path = f"{sample_path}/output.md"
+                    description_path = f"{sample_path}/description.md"
+                    
+                    in_content, _, _ = get_file(input_path)
+                    out_content, _, _ = get_file(output_path)
+                    description_content, _, _ = get_file(description_path)
+                    
+                    if in_content is not None and out_content is not None:
+                        sample_entry = {
+                            'input': in_content,
+                            'output': out_content
+                        }
+                        if description_content is not None:
+                            sample_entry['description'] = description_content
+                        samples_data.append(sample_entry)
 
         # Check for PDF statement
         pdf_statement_path = f"{base_path}/statement.pdf"

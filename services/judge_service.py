@@ -138,6 +138,8 @@ def grade_submission(submission_id, code, language, problem_id):
         if validator_error:
             return {"overall_status": "error", "message": f"Failed to get validator.py: {validator_error['message']}"}
 
+        print(f"DEBUG: Validator content for {problem_id}: {validator_content}")
+
 
         
         for i, testcase in enumerate(testcases):
@@ -155,6 +157,7 @@ def grade_submission(submission_id, code, language, problem_id):
 
             print(result)
 
+            user_stdout = result.get('stdout', '') # Store user's stdout
             stdout = result.get('stdout', '')
             stderr = result.get('stderr', '')
             err = result.get('err', '')
@@ -209,6 +212,7 @@ def grade_submission(submission_id, code, language, problem_id):
             result["status"] = test_status
             result["message"] = message
             result["stdin"] = stdin
+            result["user_output"] = user_stdout
             print(f"[Grade Submission] Appending result: {result}")
             all_test_results.append(result)
         

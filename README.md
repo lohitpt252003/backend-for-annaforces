@@ -74,7 +74,7 @@ During the grading process, the `judge_service` provides real-time status update
 
 The `services/judge_service.py` is responsible for evaluating submitted code. It now accepts a `submission_id` in its `grade_submission` function to facilitate live status updates.
 
-For each test case, the `judge_service` first calls the `/api/execute` endpoint on the executor service. If the code runs successfully, it then calls the `/api/validate` endpoint on the same service, passing the validator code, the user's output, and the test case input to get a verdict. The validator code is read from the `validator.py` file within the problem's directory in the `DATA` repository. This verdict is then then used to determine the status of the test case.
+For each test case, the `judge_service` first calls the `/api/execute` endpoint on the executor service. If the code runs successfully, it then calls the `/api/validate` endpoint on the same service, passing the validator code, the user's output, and the test case input to get a verdict. The validator code is read from the `validator.py` file within the problem's directory in the `DATA` repository. This verdict is then then used to determine the status of the test case. For more details on the `/api/validate` endpoint, refer to the [Code Execution Engine README](../judge-image-for-annaforces/README.md).
 
 ### Problem Service
 

@@ -74,8 +74,8 @@ def grading_task(submission):
     # Create submission files in GitHub
     submission_path = f"{GITHUB_SUBMISSIONS_BASE_PATH}/{submission_id_str}"
     
-    # Create meta.json
-    meta_data = {
+    # Create meta.json for GitHub
+    github_meta_data = {
         "submission_id": submission_id_str,
         "problem_id": submission['problem_id'],
         "username": submission['username'],
@@ -84,14 +84,23 @@ def grading_task(submission):
         "timestamp": submission['created_at'],
         "test_results": test_results
     }
-    add_file(f"{submission_path}/meta.json", json.dumps(meta_data, indent=4), f"Create submission {submission_id_str} meta.json")
+    add_file(f"{submission_path}/meta.json", json.dumps(github_meta_data, indent=4), f"Create submission {submission_id_str} meta.json")
 
     # Create code file
     file_extension = {"python": "py", "c": "c", "c++": "cpp"}.get(submission['language'], "txt")
     add_file(f"{submission_path}/code.{file_extension}", submission['code'], f"Create submission {submission_id_str} code file")
 
+    # Create meta data for MongoDB
+    mongo_meta_data = {
+        "submission_id": submission_id_str,
+        "problem_id": submission['problem_id'],
+        "username": submission['username'],
+        "language": submission['language'],
+        "status": final_status,
+        "timestamp": submission['created_at']
+    }
     # Insert into submissions collection
-    mongo.db.submissions.insert_one(meta_data)
+    mongo.db.submissions.insert_one(mongo_meta_data)
 
     # Remove from queue
     mongo.db.submissions_queue.delete_one({"_id": submission["_id"]})
